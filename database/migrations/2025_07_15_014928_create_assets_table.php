@@ -45,7 +45,7 @@ return new class extends Migration
 
         Schema::create('records', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('procedure_id')->constrained('assets')->onDelete('cascade');
+            $table->integer('procedure_id');
             $table->string('value');
             $table->string('result')->nullable();
             $table->string('verified_by')->nullable();

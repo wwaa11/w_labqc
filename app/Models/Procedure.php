@@ -25,7 +25,7 @@ class Procedure extends Model
 
     public function last_record()
     {
-        return $this->hasmany(Record::class)->orderBy('created_at', 'DESC')->first();
+        return $this->hasone(Record::class)->orderBy('created_at', 'DESC');
     }
 
 }

@@ -14,7 +14,7 @@ class WebController extends Controller
 {
     public function index()
     {
-        $assets = Asset::with(['procedures.control'])->where('location', auth()->user()->location)->get();
+        $assets = Asset::with(['procedures.control', 'procedures.last_record'])->where('location', auth()->user()->location)->get();
 
         return inertia('index', compact('assets'));
     }
