@@ -1,5 +1,5 @@
 import DashboardLayout from '@/layouts/dashboard';
-import { usePage, router } from '@inertiajs/react';
+import { usePage, router, Head } from '@inertiajs/react';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { Button, Box, Typography } from '@mui/material';
 
@@ -58,6 +58,7 @@ export default function AssetMain() {
 
     return (
         <DashboardLayout>
+            <Head title="Assets" />
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Typography variant="h4" fontWeight="bold">Assets</Typography>
                 <Button variant="contained" color="primary" size="large" sx={{ borderRadius: 2, fontWeight: 600 }} onClick={handleCreate} aria-label="Create new asset">

@@ -1,6 +1,7 @@
+import React from 'react';
 import { type SharedData } from '@/types';
 import { usePage, Link, useForm } from '@inertiajs/react';
-import { Box, Container, Drawer, List, ListItemText, ListItemButton, Avatar, Divider, Typography, useMediaQuery, Theme, IconButton } from '@mui/material';
+import { Box, Container, Drawer, List, ListItemText, ListItemButton, Avatar, Divider, Typography, useMediaQuery, Theme, IconButton, ListSubheader } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useTheme } from '@mui/material/styles';
 import { useMemo, FC, ReactNode, FormEvent } from 'react';
@@ -82,6 +83,8 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     const navItems = isAdmin
         ? [
             { label: 'My Assets', route: route('index'), name: 'index' },
+            { label: 'Monitoring', route: route('monitoring'), name: 'monitoring' },
+            { section: 'Management' },
             { label: 'Assets', route: route('assets.main'), name: 'assets.main' },
             { label: 'Controls', route: route('controls.main'), name: 'controls.main' },
             { label: 'Users', route: route('users.main'), name: 'users.main' },
@@ -132,22 +135,30 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
                     department={typeof auth.user.department === 'string' ? auth.user.department : undefined}
                     initials={initials}
                 />
-                <Divider sx={{ my: 2 }} />
                 {/* Navigation List */}
                 <List sx={{ flexGrow: 0 }}>
-                    {navItems.map((item) => (
-                        <ListItemButton
-                            key={item.route}
-                            component={Link}
-                            href={item.route}
-                            selected={isActive(item.name)}
-                            aria-current={isActive(item.name) ? 'page' : undefined}
-                            sx={isActive(item.name)
-                                ? { bgcolor: 'primary.light', color: 'primary.main', fontWeight: 700, borderRadius: 2 }
-                                : { borderRadius: 2 }}
-                        >
-                            <ListItemText primary={item.label} />
-                        </ListItemButton>
+                    {navItems.map((item, idx) => (
+                        item.section ? (
+                            <React.Fragment key={item.section}>
+                                <Divider sx={{ my: 1 }} />
+                                <ListSubheader sx={{ bgcolor: 'background.paper', color: 'text.secondary', fontWeight: 700, fontSize: '0.9rem', pl: 0 }} disableSticky>{item.section}</ListSubheader>
+                            </React.Fragment>
+                        ) : (
+                            item.route && item.name ? (
+                                <ListItemButton
+                                    key={String(item.route)}
+                                    component={Link}
+                                    href={String(item.route)}
+                                    selected={isActive(String(item.name))}
+                                    aria-current={isActive(String(item.name)) ? 'page' : undefined}
+                                    sx={isActive(String(item.name))
+                                        ? { bgcolor: 'primary.light', color: 'primary.main', fontWeight: 700, borderRadius: 2 }
+                                        : { borderRadius: 2 }}
+                                >
+                                    <ListItemText primary={item.label} />
+                                </ListItemButton>
+                            ) : null
+                        )
                     ))}
                 </List>
                 {/* Dark Mode Toggle */}

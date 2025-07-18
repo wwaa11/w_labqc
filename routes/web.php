@@ -24,6 +24,9 @@ Route::middleware(AdminMiddleware::class)->group(function () {
     Route::put('/assets/{id}', [WebController::class, 'AssetsUpdate'])->name('assets.update');
     Route::delete('/assets/{id}', [WebController::class, 'AssetsDestroy'])->name('assets.destroy');
 
+    Route::get('/monitoring', [WebController::class, 'monitoring'])->name('monitoring');
+    Route::get('/assets/view/{id}', [WebController::class, 'assetView'])->name('assets.view');
+
     Route::get('/controls/main', [WebController::class, 'ContolsMain'])->name('controls.main');
     Route::get('/controls/create', [WebController::class, 'ContolsCreate'])->name('controls.create');
     Route::post('/controls/store', [WebController::class, 'ContolsStore'])->name('controls.store');

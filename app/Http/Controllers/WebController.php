@@ -253,4 +253,26 @@ class WebController extends Controller
         return redirect()->route('users.main');
     }
 
+    public function monitoring()
+    {
+        $assets  = Asset::with(['procedures.control', 'procedures.last_record'])->get();
+        $grouped = $assets->groupBy('location')->map(function ($assets, $location) {
+            return [
+                'location' => $location,
+                'assets'   => $assets->values(),
+            ];
+        })->values();
+        return inertia('monitoring', [
+            'locations' => $grouped,
+        ]);
+    }
+
+    public function assetView($id)
+    {
+        $asset = Asset::with(['procedures.control', 'procedures.records'])->findOrFail($id);
+
+        return inertia('assets/view', [
+            'asset' => $asset,
+        ]);
+    }
 }

@@ -195,7 +195,7 @@ export default function Index() {
 
     return (
         <DashboardLayout>
-            <Head title="Index" />
+            <Head title="My Assets" />
             <Typography variant="h5" mb={2} fontWeight="bold">Assets</Typography>
             {(!assets || (Array.isArray(assets) && assets.length === 0)) ? (
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="30vh">

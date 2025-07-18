@@ -1,4 +1,4 @@
-import { usePage, useForm, router } from '@inertiajs/react';
+import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
 import { useState } from 'react';
@@ -69,6 +69,7 @@ export default function UsersMain() {
 
     return (
         <DashboardLayout>
+            <Head title="Users" />
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={4}>
                 <Typography variant="h4" fontWeight="bold">All Users</Typography>
                 <Box display="flex" gap={2}>
