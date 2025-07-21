@@ -9,6 +9,8 @@ import dayjs from 'dayjs';
 import Tooltip from '@mui/material/Tooltip';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CircularProgress from '@mui/material/CircularProgress';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 function AssetDetails({ asset }: { asset: any }) {
     return (
@@ -42,75 +44,90 @@ function ControlsTable({ asset, formData, handleInputChange, handleSingleSubmit,
                 </TableHead>
                 <TableBody>
                     {asset.procedures && asset.procedures.length > 0 ? (
-                        asset.procedures.map((proc: any, idx: number) => (
-                            <React.Fragment key={`${asset.id}-${proc.control?.id || idx}`}>
-                                <TableRow key={`main-${asset.id}-${proc.control?.id || idx}`} hover sx={{ bgcolor: theme.palette.mode === 'dark' ? (idx % 2 === 0 ? theme.palette.background.paper : theme.palette.grey[900]) : (idx % 2 === 0 ? 'grey.50' : 'background.default') }}>
-                                    <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{idx + 1}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{proc.control?.name || '-'}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{proc.control?.brand || '-'}</TableCell>
-                                    <Tooltip title={proc.control?.lot || ''} arrow>
-                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proc.control?.lot || '-'}</TableCell>
-                                    </Tooltip>
-                                    <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{proc.control?.expired || '-'}</TableCell>
-                                    <Tooltip title={proc.control?.memo || ''} arrow>
-                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proc.control?.memo || '-'}</TableCell>
-                                    </Tooltip>
-                                </TableRow>
-                                {proc.last_record && (
-                                    <TableRow key={`lastrecord-${asset.id}-${proc.control?.id || idx}`}>
-                                        <TableCell colSpan={2} sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}></TableCell>
-                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200', }}>
-                                            <AccessTimeIcon fontSize="inherit" sx={{ mr: 0.5 }} /> Last Record
+                        asset.procedures.map((proc: any, idx: number) => {
+                            const lastRecordDate = proc.last_record ? dayjs(proc.last_record.created_at) : null;
+                            const isToday = lastRecordDate && lastRecordDate.isSame(dayjs(), 'day');
+                            return (
+                                <React.Fragment key={`${asset.id}-${proc.control?.id || idx}`}>
+                                    <TableRow key={`main-${asset.id}-${proc.control?.id || idx}`} hover sx={{ bgcolor: theme.palette.mode === 'dark' ? (idx % 2 === 0 ? theme.palette.background.paper : theme.palette.grey[900]) : (idx % 2 === 0 ? 'grey.50' : 'background.default') }}>
+                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{idx + 1}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {proc.control?.name || '-'}
+                                            {lastRecordDate ? (
+                                                isToday ? (
+                                                    <CheckCircleIcon sx={{ color: 'success.main', fontSize: 14, ml: 0.5 }} />
+                                                ) : (
+                                                    <FiberManualRecordIcon sx={{ color: 'error.main', fontSize: 12, ml: 0.5 }} />
+                                                )
+                                            ) : (
+                                                <FiberManualRecordIcon sx={{ color: 'error.main', fontSize: 12, ml: 0.5 }} />
+                                            )}
                                         </TableCell>
-                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}>
-                                            {proc.last_record.value}
-                                        </TableCell>
-                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}>
-                                            <Chip label={proc.last_record.result} size="small" color={proc.last_record.result === 'PASS' ? 'success' : 'error'} sx={{ fontSize: '0.8rem', fontStyle: 'italic' }} />
-                                        </TableCell>
-                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}>
-                                            {dayjs(proc.last_record.created_at).format('DD/MM/YYYY HH:mm')} ( {proc.last_record.verified_by} )
+                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{proc.control?.brand || '-'}</TableCell>
+                                        <Tooltip title={proc.control?.lot || ''} arrow>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proc.control?.lot || '-'}</TableCell>
+                                        </Tooltip>
+                                        <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary }}>{proc.control?.expired || '-'}</TableCell>
+                                        <Tooltip title={proc.control?.memo || ''} arrow>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.primary, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proc.control?.memo || '-'}</TableCell>
+                                        </Tooltip>
+                                    </TableRow>
+                                    {proc.last_record && (
+                                        <TableRow key={`lastrecord-${asset.id}-${proc.control?.id || idx}`}>
+                                            <TableCell colSpan={2} sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}></TableCell>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200', }}>
+                                                <AccessTimeIcon fontSize="inherit" sx={{ mr: 0.5 }} /> Last Record
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}>
+                                                {proc.last_record.value}
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}>
+                                                <Chip label={proc.last_record.result} size="small" color={proc.last_record.result === 'PASS' ? 'success' : 'error'} sx={{ fontSize: '0.8rem', fontStyle: 'italic' }} />
+                                            </TableCell>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: theme.palette.text.secondary, fontStyle: 'italic', bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'grey.200' }}>
+                                                {dayjs(proc.last_record.created_at).format('DD/MM/YYYY HH:mm')} ( {proc.last_record.verified_by} )
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    <TableRow key={`input-${asset.id}-${proc.control?.id || idx}`}>
+                                        <TableCell colSpan={2}></TableCell>
+                                        <TableCell>Limit : {proc.control?.limit}</TableCell>
+                                        <TableCell colSpan={5} sx={{ py: 0.5 }}>
+                                            <Box display="flex" flexWrap="wrap" alignItems="center" gap={1} py={0.5}>
+                                                <TextField
+                                                    label="Value"
+                                                    name={`value-${asset.id}-${proc.id}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    value={formData[`${asset.id}-${proc.id}`]?.value || ''}
+                                                    onChange={e => handleInputChange(asset.id, proc.id, 'value', e.target.value)}
+                                                    sx={{ minWidth: 80, mr: 1 }}
+                                                    placeholder="Enter value"
+                                                />
+                                                <FormControl component="fieldset" size="small" sx={{ minWidth: 100 }}>
+                                                    <FormLabel component="legend" sx={{ fontSize: '0.8rem' }}>Result</FormLabel>
+                                                    <RadioGroup row name={`result-${asset.id}-${proc.id}`}
+                                                        value={formData[`${asset.id}-${proc.id}`]?.result || 'PASS'}
+                                                        onChange={e => handleInputChange(asset.id, proc.id, 'result', e.target.value)}
+                                                    >
+                                                        <FormControlLabel value="PASS" control={<Radio color="success" size="small" />} label={<span style={{ fontSize: '0.8rem' }}>PASS</span>} />
+                                                        <FormControlLabel value="FAILED" control={<Radio color="error" size="small" />} label={<span style={{ fontSize: '0.8rem' }}>FAILED</span>} />
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <form onSubmit={e => handleSingleSubmit(asset.id, proc.id, e)}>
+                                                    <Button type="submit" variant="outlined" color="primary" size="small" sx={{ borderRadius: 1, fontWeight: 600, px: 2, py: 0.5, fontSize: '0.8rem', minWidth: 70 }} aria-label={`Submit result for ${asset.name} - ${proc.control?.name || 'Control'}`}
+                                                        endIcon={processingId === `${asset.id}-${proc.id}` ? <CircularProgress size={16} color="inherit" /> : null}
+                                                        disabled={processingId === `${asset.id}-${proc.id}`}
+                                                    >
+                                                        {processingId === `${asset.id}-${proc.id}` ? 'Saving...' : 'Submit'}
+                                                    </Button>
+                                                </form>
+                                            </Box>
                                         </TableCell>
                                     </TableRow>
-                                )}
-                                <TableRow key={`input-${asset.id}-${proc.control?.id || idx}`}>
-                                    <TableCell colSpan={2}></TableCell>
-                                    <TableCell>Limit : {proc.control?.limit}</TableCell>
-                                    <TableCell colSpan={5} sx={{ py: 0.5 }}>
-                                        <Box display="flex" flexWrap="wrap" alignItems="center" gap={1} py={0.5}>
-                                            <TextField
-                                                label="Value"
-                                                name={`value-${asset.id}-${proc.id}`}
-                                                size="small"
-                                                variant="outlined"
-                                                value={formData[`${asset.id}-${proc.id}`]?.value || ''}
-                                                onChange={e => handleInputChange(asset.id, proc.id, 'value', e.target.value)}
-                                                sx={{ minWidth: 80, mr: 1 }}
-                                                placeholder="Enter value"
-                                            />
-                                            <FormControl component="fieldset" size="small" sx={{ minWidth: 100 }}>
-                                                <FormLabel component="legend" sx={{ fontSize: '0.8rem' }}>Result</FormLabel>
-                                                <RadioGroup row name={`result-${asset.id}-${proc.id}`}
-                                                    value={formData[`${asset.id}-${proc.id}`]?.result || 'PASS'}
-                                                    onChange={e => handleInputChange(asset.id, proc.id, 'result', e.target.value)}
-                                                >
-                                                    <FormControlLabel value="PASS" control={<Radio color="success" size="small" />} label={<span style={{ fontSize: '0.8rem' }}>PASS</span>} />
-                                                    <FormControlLabel value="FAILED" control={<Radio color="error" size="small" />} label={<span style={{ fontSize: '0.8rem' }}>FAILED</span>} />
-                                                </RadioGroup>
-                                            </FormControl>
-                                            <form onSubmit={e => handleSingleSubmit(asset.id, proc.id, e)}>
-                                                <Button type="submit" variant="outlined" color="primary" size="small" sx={{ borderRadius: 1, fontWeight: 600, px: 2, py: 0.5, fontSize: '0.8rem', minWidth: 70 }} aria-label={`Submit result for ${asset.name} - ${proc.control?.name || 'Control'}`}
-                                                    endIcon={processingId === `${asset.id}-${proc.id}` ? <CircularProgress size={16} color="inherit" /> : null}
-                                                    disabled={processingId === `${asset.id}-${proc.id}`}
-                                                >
-                                                    {processingId === `${asset.id}-${proc.id}` ? 'Saving...' : 'Submit'}
-                                                </Button>
-                                            </form>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            </React.Fragment>
-                        ))
+                                </React.Fragment>
+                            );
+                        })
                     ) : (
                         <TableRow>
                             <TableCell colSpan={6} align="center" sx={{ fontSize: '0.8rem' }}>No Controls</TableCell>

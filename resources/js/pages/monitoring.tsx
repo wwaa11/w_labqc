@@ -3,6 +3,8 @@ import { Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead
 import { usePage, router, Head } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import React from 'react'; // Added missing import
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 export default function Monitoring() {
     const { locations } = usePage().props as any;
@@ -27,10 +29,9 @@ export default function Monitoring() {
                                     <TableHead>
                                         <TableRow>
                                             <TableCell>Name</TableCell>
-                                            <TableCell>Type</TableCell>
                                             <TableCell>Brand</TableCell>
-                                            <TableCell>Model</TableCell>
-                                            <TableCell>Serial</TableCell>
+                                            <TableCell>Lot</TableCell>
+                                            <TableCell>Expired</TableCell>
                                             <TableCell>Memo</TableCell>
                                             <TableCell>Last Record</TableCell>
                                             <TableCell>Action</TableCell>
@@ -69,27 +70,36 @@ export default function Monitoring() {
                                                     </TableRow>
                                                     {/* Procedure rows */}
                                                     {asset.procedures && asset.procedures.length > 0 ? (
-                                                        asset.procedures.map((proc: any) => (
-                                                            <TableRow key={proc.id}>
-                                                                <TableCell>{proc.control?.name || '-'}</TableCell>
-                                                                <TableCell>{proc.control?.brand || '-'}</TableCell>
-                                                                <TableCell>{proc.control?.lot || '-'}</TableCell>
-                                                                <TableCell>{proc.control?.expired || '-'}</TableCell>
-                                                                <TableCell>{proc.control?.memo || '-'}</TableCell>
-                                                                <TableCell>
-                                                                    {proc.last_record ? (
-                                                                        <>
-                                                                            <Chip label={proc.last_record.result} size="small" color={proc.last_record.result === 'PASS' ? 'success' : 'error'} sx={{ fontSize: '0.8rem', fontStyle: 'italic', mx: 0.5 }} />
-                                                                            <span style={{ fontWeight: 500 }}>{proc.last_record.value}</span>{' '}
-                                                                            <span style={{ color: '#888', fontSize: '0.8rem' }}>{dayjs(proc.last_record.created_at).format('DD/MM/YYYY HH:mm')}</span>
-                                                                        </>
-                                                                    ) : (
-                                                                        <span style={{ color: '#aaa', fontSize: '0.8rem' }}>-</span>
-                                                                    )}
-                                                                </TableCell>
-                                                                <TableCell></TableCell>
-                                                            </TableRow>
-                                                        ))
+                                                        asset.procedures.map((proc: any) => {
+                                                            const lastRecordDate = proc.last_record ? dayjs(proc.last_record.created_at) : null;
+                                                            const isToday = lastRecordDate && lastRecordDate.isSame(dayjs(), 'day');
+                                                            return (
+                                                                <TableRow key={proc.id}>
+                                                                    <TableCell>{proc.control?.name || '-'}</TableCell>
+                                                                    <TableCell>{proc.control?.brand || '-'}</TableCell>
+                                                                    <TableCell>{proc.control?.lot || '-'}</TableCell>
+                                                                    <TableCell>{proc.control?.expired || '-'}</TableCell>
+                                                                    <TableCell>{proc.control?.memo || '-'}</TableCell>
+                                                                    <TableCell>
+                                                                        {proc.last_record ? (
+                                                                            <>
+                                                                                <Chip label={proc.last_record.result} size="small" color={proc.last_record.result === 'PASS' ? 'success' : 'error'} sx={{ fontSize: '0.8rem', fontStyle: 'italic', mx: 0.5 }} />
+                                                                                <span style={{ fontWeight: 500 }}>{proc.last_record.value}</span>{' '}
+                                                                                <span style={{ color: '#888', fontSize: '0.8rem' }}>{dayjs(proc.last_record.created_at).format('DD/MM/YYYY HH:mm')}</span>
+                                                                                {isToday ? (
+                                                                                    <CheckCircleIcon sx={{ color: 'success.main', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
+                                                                                ) : (
+                                                                                    <CancelIcon sx={{ color: 'error.main', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
+                                                                                )}
+                                                                            </>
+                                                                        ) : (
+                                                                            <CancelIcon sx={{ color: 'error.main', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell></TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        })
                                                     ) : (
                                                         <TableRow>
                                                             <TableCell colSpan={8} align="center" sx={{ color: '#aaa', fontSize: '0.8rem' }}>No procedures</TableCell>

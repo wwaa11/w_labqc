@@ -109,16 +109,22 @@ class WebController extends Controller
         $asset->update($validated);
 
         // Update procedures (controls)
-        // Remove old procedures
-        $asset->procedures()->delete();
+        $existingControlIds = $asset->procedures()->pluck('control_id')->toArray();
+        $newControlIds      = $request->controls ?? [];
+
+        // Delete procedures that are no longer present
+        $toDelete = array_diff($existingControlIds, $newControlIds);
+        if (! empty($toDelete)) {
+            $asset->procedures()->whereIn('control_id', $toDelete)->delete();
+        }
+
         // Add new procedures
-        if (! empty($request->controls)) {
-            foreach ($request->controls as $control) {
-                $new_control             = new Procedure();
-                $new_control->asset_id   = $asset->id;
-                $new_control->control_id = $control;
-                $new_control->save();
-            }
+        $toAdd = array_diff($newControlIds, $existingControlIds);
+        foreach ($toAdd as $controlId) {
+            $new_control             = new Procedure();
+            $new_control->asset_id   = $asset->id;
+            $new_control->control_id = $controlId;
+            $new_control->save();
         }
 
         return redirect()->route('assets.main')->with('success', 'Asset updated successfully.');
