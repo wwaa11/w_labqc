@@ -37,5 +37,6 @@ Route::middleware(AdminMiddleware::class)->group(function () {
     Route::get('/users/main', [WebController::class, 'UsersMain'])->name('users.main');
     Route::post('/users/store', [WebController::class, 'UsersStore'])->name('users.store');
     Route::post('/users/admin', [WebController::class, 'UsersAdmin'])->name('users.admin');
+    Route::post('/users/mass-assign-location', [WebController::class, 'usersMassAssignLocation'])->name('users.massAssignLocation');
     Route::delete('/users/{id}', [WebController::class, 'UsersDestroy'])->name('users.destroy');
 });

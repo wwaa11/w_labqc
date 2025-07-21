@@ -193,9 +193,13 @@ class WebController extends Controller
         return redirect()->route('controls.main')->with('success', 'Control updated successfully.');
     }
 
-    public function UsersMain()
+    public function UsersMain(Request $request)
     {
-        $users        = User::all();
+        $query = User::query();
+        if ($request->filled('search')) {
+            $query->where('user_id', 'like', '%' . $request->search . '%');
+        }
+        $users        = $query->get();
         $getlocations = Asset::groupBy('location')->select('location')->get();
         $locations    = [];
         foreach ($getlocations as $location) {
@@ -274,6 +278,17 @@ class WebController extends Controller
         return redirect()->route('users.main')->with('success', 'User created successfully.');
     }
 
+    public function usersMassAssignLocation(Request $request)
+    {
+        $validated = $request->validate([
+            'user_ids' => 'required|string',
+            'location' => 'required|string|max:255',
+        ]);
+        $userIds = array_map('trim', explode(',', $validated['user_ids']));
+        User::whereIn('user_id', $userIds)->update(['location' => $validated['location']]);
+        return redirect()->route('users.main')->with('success', 'Location assigned to selected users.');
+    }
+
     public function UsersDestroy($id)
     {
         $user = User::findOrFail($id);
@@ -304,4 +319,5 @@ class WebController extends Controller
             'asset' => $asset,
         ]);
     }
+
 }

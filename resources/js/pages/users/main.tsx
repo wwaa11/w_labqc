@@ -1,7 +1,10 @@
 import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import { useTheme } from '@mui/material/styles';
 
 export default function UsersMain() {
     const { users, locations, auth } = usePage().props as any;
@@ -14,6 +17,22 @@ export default function UsersMain() {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editUserId, setEditUserId] = useState('');
     const [editLocation, setEditLocation] = useState('');
+    const theme = useTheme();
+    const [search, setSearch] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('search') || '';
+        }
+        return '';
+    });
+    const [input, setInput] = useState(search);
+    const [massAssignOpen, setMassAssignOpen] = useState(false);
+    const [massUserIds, setMassUserIds] = useState('');
+    const [massLocation, setMassLocation] = useState('');
+
+    useEffect(() => {
+        setInput(search);
+    }, [search]);
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => {
@@ -67,14 +86,67 @@ export default function UsersMain() {
         }
     };
 
+    const handleSearch = () => {
+        router.get(route('users.main'), { search: input }, { preserveState: true, replace: true });
+    };
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') handleSearch();
+    };
+    const handleReset = () => {
+        setInput('');
+        setSearch('');
+        router.get(route('users.main'), {}, { preserveState: true, replace: true });
+    };
+    const handleMassAssign = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.post(route('users.massAssignLocation'), {
+            user_ids: massUserIds,
+            location: massLocation,
+        }, {
+            onSuccess: () => {
+                setMassAssignOpen(false);
+                setMassUserIds('');
+                setMassLocation('');
+            }
+        });
+    };
+
     return (
         <DashboardLayout>
             <Head title="Users" />
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={4}>
                 <Typography variant="h4" fontWeight="bold">All Users</Typography>
                 <Box display="flex" gap={2}>
+                    <Paper
+                        component="form"
+                        onSubmit={e => { e.preventDefault(); handleSearch(); }}
+                        sx={{ display: 'flex', alignItems: 'center', borderRadius: '5px', boxShadow: 0, px: 1, py: 0.5, minWidth: 260, bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : 'background.paper' }}
+                        elevation={1}
+                    >
+                        <TextField
+                            label="Search by User ID"
+                            size="small"
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            variant="standard"
+                            InputProps={{ disableUnderline: true }}
+                            sx={{ flex: 1, minWidth: 120, bgcolor: 'transparent', pr: 1 }}
+                        />
+                        <Button type="submit" variant="text" color="primary" sx={{ minWidth: 40, p: 1 }} aria-label="Search">
+                            <SearchIcon />
+                        </Button>
+                        {input && (
+                            <Button type="button" variant="text" color="secondary" sx={{ minWidth: 40, p: 1 }} aria-label="Reset filter" onClick={handleReset}>
+                                <CloseIcon />
+                            </Button>
+                        )}
+                    </Paper>
                     <Button variant="contained" color="primary" size="large" sx={{ borderRadius: 2, fontWeight: 600 }} onClick={handleOpen} aria-label="Assign location by user ID">
                         Assign Location by User ID
+                    </Button>
+                    <Button variant="contained" color="secondary" size="large" sx={{ borderRadius: 2, fontWeight: 600 }} onClick={() => setMassAssignOpen(true)} aria-label="Mass assign location">
+                        Mass Assign Location
                     </Button>
                     <Button variant="contained" color="secondary" size="large" sx={{ borderRadius: 2, fontWeight: 600 }} onClick={handleAdminOpen} aria-label="Add admin">
                         Add Admin
@@ -170,6 +242,43 @@ export default function UsersMain() {
                     <DialogActions>
                         <Button onClick={handleEditClose}>Cancel</Button>
                         <Button type="submit" variant="contained" color="primary" sx={{ borderRadius: 2, fontWeight: 600 }}>Save</Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
+            <Dialog open={massAssignOpen} onClose={() => setMassAssignOpen(false)} PaperProps={{ sx: { borderRadius: 3, p: 2 } }}>
+                <DialogTitle>Mass Assign Location</DialogTitle>
+                <form onSubmit={handleMassAssign}>
+                    <DialogContent>
+                        <TextField
+                            label="User IDs (comma separated)"
+                            value={massUserIds}
+                            onChange={e => setMassUserIds(e.target.value)}
+                            fullWidth
+                            required
+                            margin="normal"
+                        />
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel id="mass-location-label">Location</InputLabel>
+                            <Select
+                                labelId="mass-location-label"
+                                value={massLocation}
+                                label="Location"
+                                onChange={e => setMassLocation(e.target.value)}
+                                required
+                            >
+                                {locations && locations.length > 0 ? (
+                                    locations.map((loc: string, idx: number) => (
+                                        <MenuItem key={idx} value={loc}>{loc}</MenuItem>
+                                    ))
+                                ) : (
+                                    <MenuItem value="" disabled>No locations available</MenuItem>
+                                )}
+                            </Select>
+                        </FormControl>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setMassAssignOpen(false)}>Cancel</Button>
+                        <Button type="submit" variant="contained" color="primary" sx={{ borderRadius: 2, fontWeight: 600 }}>Assign</Button>
                     </DialogActions>
                 </form>
             </Dialog>
