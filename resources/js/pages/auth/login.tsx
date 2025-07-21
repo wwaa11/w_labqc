@@ -44,7 +44,7 @@ export default function Login({ status }: LoginProps) {
                 <Box display="flex" flexDirection="column" alignItems="center" mb={2}>
                     <Logo className="h-12 mb-2" />
                     <Typography variant="h5" fontWeight={600} mb={0.5} color="primary.main">
-                        Log in
+                        PR9 LAB Assets
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                         Log in to your account
