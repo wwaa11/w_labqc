@@ -2,9 +2,28 @@ import DashboardLayout from '@/layouts/dashboard';
 import { usePage, router, Head } from '@inertiajs/react';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { Button, Box, Typography } from '@mui/material';
+import { useState, useEffect } from 'react';
+import TextField from '@mui/material/TextField';
+import Paper from '@mui/material/Paper';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import { useTheme } from '@mui/material/styles';
 
 export default function AssetMain() {
     const { assets } = usePage().props as any;
+    const [search, setSearch] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('search') || '';
+        }
+        return '';
+    });
+    const [input, setInput] = useState(search);
+    const theme = useTheme();
+
+    useEffect(() => {
+        setInput(search);
+    }, [search]);
 
     const handleDelete = (id: number) => {
         if (window.confirm('Are you sure you want to delete this asset?')) {
@@ -18,6 +37,19 @@ export default function AssetMain() {
 
     const handleCreate = () => {
         router.visit(route('assets.create'));
+    };
+
+    const handleSearch = () => {
+        router.get(route('assets.main'), { search: input }, { preserveState: true, replace: true });
+    };
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') handleSearch();
+    };
+
+    const handleReset = () => {
+        setInput('');
+        setSearch('');
+        router.get(route('assets.main'), {}, { preserveState: true, replace: true });
     };
 
     const columns: GridColDef[] = [
@@ -60,8 +92,33 @@ export default function AssetMain() {
         <DashboardLayout>
             <Head title="Assets" />
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Typography variant="h4" fontWeight="bold">Assets</Typography>
-                <Button variant="contained" color="primary" size="large" sx={{ borderRadius: 2, fontWeight: 600 }} onClick={handleCreate} aria-label="Create new asset">
+                <Typography variant="h4">Assets</Typography>
+                <Paper
+                    component="form"
+                    onSubmit={e => { e.preventDefault(); handleSearch(); }}
+                    sx={{ display: 'flex', alignItems: 'center', borderRadius: '5px', boxShadow: 0, px: 1, py: 0.5, mr: 2, minWidth: 260, bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : 'background.paper' }}
+                    elevation={1}
+                >
+                    <TextField
+                        label="Search by name"
+                        size="small"
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        variant="standard"
+                        InputProps={{ disableUnderline: true }}
+                        sx={{ flex: 1, minWidth: 120, bgcolor: 'transparent', pr: 1 }}
+                    />
+                    <Button type="submit" variant="text" color="primary" sx={{ minWidth: 40, p: 1 }} aria-label="Search">
+                        <SearchIcon />
+                    </Button>
+                    {input && (
+                        <Button type="button" variant="text" color="secondary" sx={{ minWidth: 40, p: 1 }} aria-label="Reset filter" onClick={handleReset}>
+                            <CloseIcon />
+                        </Button>
+                    )}
+                </Paper>
+                <Button variant="contained" color="primary" onClick={handleCreate}>
                     Create New Asset
                 </Button>
             </Box>

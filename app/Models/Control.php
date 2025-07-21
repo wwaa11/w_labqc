@@ -9,6 +9,10 @@ class Control extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'name', 'limit', 'brand', 'lot', 'expired', 'memo',
+    ];
+
     protected $casts = [
         'expired' => 'datetime',
     ];

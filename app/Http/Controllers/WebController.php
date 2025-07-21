@@ -36,10 +36,13 @@ class WebController extends Controller
         return redirect()->route('index');
     }
 
-    public function AssetsMain()
+    public function AssetsMain(Request $request)
     {
-        $assets = Asset::all();
-
+        $query = Asset::query();
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+        $assets = $query->get();
         return inertia('assets/main', compact('assets'));
     }
 
@@ -129,10 +132,13 @@ class WebController extends Controller
         return redirect()->route('assets.main');
     }
 
-    public function ContolsMain()
+    public function ContolsMain(Request $request)
     {
-        $controls = Control::all();
-
+        $query = Control::query();
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+        $controls = $query->get();
         return inertia('controls/main', compact('controls'));
     }
 
@@ -162,6 +168,29 @@ class WebController extends Controller
         $control->delete();
 
         return redirect()->route('controls.main');
+    }
+
+    public function ContolsEdit($id)
+    {
+        $control = Control::findOrFail($id);
+        return inertia('controls/edit', [
+            'control' => $control,
+        ]);
+    }
+
+    public function ContolsUpdate(Request $request, $id)
+    {
+        $control   = Control::findOrFail($id);
+        $validated = $request->validate([
+            'name'    => 'required|string|max:255',
+            'limit'   => 'nullable|string|max:255',
+            'brand'   => 'nullable|string|max:255',
+            'lot'     => 'nullable|string|max:255',
+            'expired' => 'nullable|string|max:255',
+            'memo'    => 'nullable|string',
+        ]);
+        $control->update($validated);
+        return redirect()->route('controls.main')->with('success', 'Control updated successfully.');
     }
 
     public function UsersMain()

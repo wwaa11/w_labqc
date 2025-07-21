@@ -21,7 +21,7 @@ Route::middleware(AdminMiddleware::class)->group(function () {
     Route::get('/assets/create', [WebController::class, 'AssetsCreate'])->name('assets.create');
     Route::post('/assets/store', [WebController::class, 'AssetsStore'])->name('assets.store');
     Route::get('/assets/edit/{id}', [WebController::class, 'AssetsEdit'])->name('assets.edit');
-    Route::put('/assets/{id}', [WebController::class, 'AssetsUpdate'])->name('assets.update');
+    Route::post('/assets/{id}', [WebController::class, 'AssetsUpdate'])->name('assets.update');
     Route::delete('/assets/{id}', [WebController::class, 'AssetsDestroy'])->name('assets.destroy');
 
     Route::get('/monitoring', [WebController::class, 'monitoring'])->name('monitoring');
@@ -31,6 +31,7 @@ Route::middleware(AdminMiddleware::class)->group(function () {
     Route::get('/controls/create', [WebController::class, 'ContolsCreate'])->name('controls.create');
     Route::post('/controls/store', [WebController::class, 'ContolsStore'])->name('controls.store');
     Route::get('/controls/edit/{id}', [WebController::class, 'ContolsEdit'])->name('controls.edit');
+    Route::post('/controls/update/{id}', [WebController::class, 'ContolsUpdate'])->name('controls.update');
     Route::delete('/assets/{id}', [WebController::class, 'ContolsDestroy'])->name('controls.destroy');
 
     Route::get('/users/main', [WebController::class, 'UsersMain'])->name('users.main');

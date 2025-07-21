@@ -48,7 +48,7 @@ export default function EditAsset() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(route('assets.update', asset.id));
+        router.post(route('assets.update', asset.id), data);
     };
 
     return (
