@@ -303,9 +303,13 @@ class WebController extends Controller
         return redirect()->route('users.main');
     }
 
-    public function monitoring()
+    public function monitoring(Request $request)
     {
-        $assets  = Asset::with(['procedures.control', 'procedures.last_record'])->get();
+        $query = Asset::with(['procedures.control', 'procedures.last_record']);
+        if ($request->filled('ward')) {
+            $query->where('location', $request->ward);
+        }
+        $assets  = $query->get();
         $grouped = $assets->groupBy('location')->map(function ($assets, $location) {
             return [
                 'location' => $location,
@@ -313,7 +317,9 @@ class WebController extends Controller
             ];
         })->values();
         return inertia('monitoring', [
-            'locations' => $grouped,
+            'locations'    => $grouped,
+            'wards'        => Asset::distinct()->pluck('location'),
+            'selectedWard' => $request->ward ?? '',
         ]);
     }
 

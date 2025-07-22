@@ -288,6 +288,8 @@ export default function UsersMain() {
                         <TableRow>
                             <TableCell>User ID</TableCell>
                             <TableCell>Name</TableCell>
+                            <TableCell>Position</TableCell>
+                            <TableCell>Department</TableCell>
                             <TableCell>Role</TableCell>
                             <TableCell>Location</TableCell>
                             <TableCell>Action</TableCell>
@@ -298,6 +300,8 @@ export default function UsersMain() {
                             <TableRow key={user.id}>
                                 <TableCell>{user.user_id}</TableCell>
                                 <TableCell>{user.name}</TableCell>
+                                <TableCell>{user.position || '-'}</TableCell>
+                                <TableCell>{user.department || '-'}</TableCell>
                                 <TableCell>{user.role}</TableCell>
                                 <TableCell>{user.location || '-'}</TableCell>
                                 <TableCell>

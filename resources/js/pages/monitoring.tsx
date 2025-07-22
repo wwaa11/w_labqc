@@ -1,13 +1,22 @@
 import DashboardLayout from '@/layouts/dashboard';
-import { Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Divider, Button, Chip } from '@mui/material';
+import { Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Divider, Button, Chip, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
 import { usePage, router, Head } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import React from 'react'; // Added missing import
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import PersonIcon from '@mui/icons-material/Person';
+import { useTheme } from '@mui/material/styles';
 
 export default function Monitoring() {
-    const { locations } = usePage().props as any;
+    const { locations, wards, selectedWard } = usePage().props as any;
+    const [ward, setWard] = React.useState(selectedWard || '');
+    const theme = useTheme();
+
+    const handleWardChange = (e: any) => {
+        setWard(e.target.value);
+        router.get(route('monitoring'), { ward: e.target.value }, { preserveState: true, replace: true });
+    };
     const handleView = (assetId: number) => {
         router.visit(route('assets.view', assetId));
     };
@@ -15,6 +24,22 @@ export default function Monitoring() {
         <DashboardLayout>
             <Head title="Monitoring" />
             <Box py={4}>
+                <Box display="flex" alignItems="center" mb={3} gap={2}>
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel id="ward-label">Filter by Ward</InputLabel>
+                        <Select
+                            labelId="ward-label"
+                            value={ward}
+                            label="Filter by Ward"
+                            onChange={handleWardChange}
+                        >
+                            <MenuItem value="">All Wards</MenuItem>
+                            {wards && wards.map((w: string, idx: number) => (
+                                <MenuItem key={idx} value={w}>{w}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
                 <Typography variant="h4" fontWeight="bold" mb={2}>
                     Monitoring
                 </Typography>
@@ -91,9 +116,23 @@ export default function Monitoring() {
                                                                                 ) : (
                                                                                     <CancelIcon sx={{ color: 'error.main', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
                                                                                 )}
+                                                                                <Chip
+                                                                                    icon={<PersonIcon sx={{ fontSize: 16 }} />}
+                                                                                    label={proc.last_record.verified_by}
+                                                                                    size="small"
+                                                                                    sx={{ ml: 1, bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100', color: theme.palette.mode === 'dark' ? 'grey.100' : 'text.secondary', fontSize: '0.8rem', fontWeight: 500 }}
+                                                                                />
                                                                             </>
                                                                         ) : (
-                                                                            <CancelIcon sx={{ color: 'error.main', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
+                                                                            <>
+                                                                                <CancelIcon sx={{ color: 'error.main', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
+                                                                                <Chip
+                                                                                    icon={<PersonIcon sx={{ fontSize: 16 }} />}
+                                                                                    label="-"
+                                                                                    size="small"
+                                                                                    sx={{ ml: 1, bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100', color: theme.palette.mode === 'dark' ? 'grey.100' : 'text.secondary', fontSize: '0.8rem', fontWeight: 500 }}
+                                                                                />
+                                                                            </>
                                                                         )}
                                                                     </TableCell>
                                                                     <TableCell></TableCell>
