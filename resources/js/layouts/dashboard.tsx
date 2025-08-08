@@ -1,7 +1,7 @@
 import React from 'react';
 import { type SharedData } from '@/types';
 import { usePage, Link, useForm, router } from '@inertiajs/react';
-import { Box, Container, Drawer, List, ListItemText, ListItemButton, Avatar, Divider, Typography, IconButton, Snackbar, Alert, Tooltip, AppBar, Toolbar } from '@mui/material';
+import { Box, Container, Drawer, List, ListItemText, ListItemButton, ListItemIcon, Avatar, Divider, Typography, IconButton, Snackbar, Alert, Tooltip, AppBar, Toolbar } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 
 import { useMemo, FC, ReactNode, FormEvent } from 'react';
@@ -9,6 +9,14 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 import MenuIcon from '@mui/icons-material/Menu';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
+import ScienceIcon from '@mui/icons-material/Science';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import CategoryIcon from '@mui/icons-material/Category';
+import TuneIcon from '@mui/icons-material/Tune';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -121,6 +129,7 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [drawerOpen, setDrawerOpen] = React.useState(false);
+    const [mini, setMini] = React.useState(true); // collapsed by default on desktop
     const [flashOpen, setFlashOpen] = React.useState(false);
     const flashMessage: string = (flash?.success as string) || (flash?.error as string) || '';
     const flashSeverity: 'success' | 'error' = flash?.error ? 'error' : 'success';
@@ -138,15 +147,15 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     // Navigation items array
     const navItems = isAdmin
         ? [
-            { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard' },
-            { label: 'Assets', route: route('assets.main'), name: 'assets.main' },
-            { label: 'Controls', route: route('controls.main'), name: 'controls.main' },
-            { label: 'Roles', route: route('roles.main'), name: 'roles.main' },
-            { label: 'Asset Types', route: route('asset-types.main'), name: 'asset-types.main' },
-            { label: 'Control Types', route: route('control-types.main'), name: 'control-types.main' },
+            { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
+            { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
+            { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
+            { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
+            { label: 'Asset Types', route: route('asset-types.main'), name: 'asset-types.main', icon: <CategoryIcon /> },
+            { label: 'Control Types', route: route('control-types.main'), name: 'control-types.main', icon: <TuneIcon /> },
         ]
         : [
-            { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard' },
+            { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
         ];
 
     // Helper to check if a route is active by route name
@@ -160,20 +169,24 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
         post(route('logout'));
     };
 
+    const miniEffective = isMobile ? false : mini;
+
     const drawerContent = (
         <>
-            <Box px={2} py={1.5} borderBottom={1} borderColor="divider" sx={{ borderRadius: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6" fontWeight={700}>{appName}</Typography>
+            <Box px={miniEffective ? 1 : 2} py={1.5} borderBottom={1} borderColor="divider" sx={{ borderRadius: 0, display: 'flex', alignItems: 'center', justifyContent: miniEffective ? 'center' : 'space-between' }}>
+                {!miniEffective && <Typography variant="h6" fontWeight={700}>{appName}</Typography>}
                 <ThemeToggle />
             </Box>
             {/* User Info */}
-            <UserInfo
-                name={String(auth.user.name)}
-                avatar={typeof auth.user.avatar === 'string' ? auth.user.avatar : undefined}
-                position={typeof auth.user.position === 'string' ? auth.user.position : undefined}
-                department={typeof auth.user.department === 'string' ? auth.user.department : undefined}
-                initials={initials}
-            />
+            {!miniEffective && (
+                <UserInfo
+                    name={String(auth.user.name)}
+                    avatar={typeof auth.user.avatar === 'string' ? auth.user.avatar : undefined}
+                    position={typeof auth.user.position === 'string' ? auth.user.position : undefined}
+                    department={typeof auth.user.department === 'string' ? auth.user.department : undefined}
+                    initials={initials}
+                />
+            )}
             {/* Navigation List */}
             <List sx={{ flexGrow: 0 }}>
                 {navItems.map((item) => (
@@ -183,19 +196,61 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
                         href={String(item.route)}
                         selected={isActive(String(item.name))}
                         aria-current={isActive(String(item.name)) ? 'page' : undefined}
-                        sx={isActive(String(item.name))
-                            ? { bgcolor: 'primary.light', color: 'primary.main', fontWeight: 700, borderRadius: 2 }
-                            : { borderRadius: 2 }}
+                        sx={{
+                            borderRadius: 2,
+                            justifyContent: miniEffective ? 'center' : 'flex-start',
+                            minHeight: 44,
+                            py: 0.75,
+                            px: miniEffective ? 1 : 2,
+                            ...(isActive(String(item.name)) && { bgcolor: 'primary.light', color: 'primary.main', fontWeight: 700 }),
+                        }}
                         onClick={() => { if (isMobile) setDrawerOpen(false); }}
                     >
-                        <ListItemText primary={item.label} />
+                        <ListItemIcon sx={{
+                            minWidth: miniEffective ? 0 : 40,
+                            color: 'inherit',
+                            mr: miniEffective ? 0 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 28,
+                            height: 28,
+                            '& svg': { fontSize: 20, width: 20, height: 20 },
+                        }}>
+                            {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={item.label}
+                            sx={{
+                                display: miniEffective ? 'none' : 'block',
+                                ml: 1,
+                            }}
+                        />
                     </ListItemButton>
                 ))}
             </List>
             <Box flexGrow={1} />
             <Divider sx={{ my: 2 }} />
-            {/* Logout Button at the bottom */}
-            <LogoutButton onLogout={handleLogout} />
+            {/* Collapse/Expand toggle (desktop only) */}
+            {!isMobile && (
+                <Box px={1} pb={1} display="flex" justifyContent={miniEffective ? 'center' : 'flex-end'}>
+                    <IconButton onClick={() => setMini(!mini)} aria-label={miniEffective ? 'Expand menu' : 'Collapse menu'}>
+                        {miniEffective ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                    </IconButton>
+                </Box>
+            )}
+            {/* Logout at the bottom */}
+            {miniEffective ? (
+                <Box px={1} pb={1} display="flex" justifyContent="center">
+                    <form onSubmit={handleLogout}>
+                        <IconButton type="submit" color="error" aria-label="Logout">
+                            <LogoutIcon />
+                        </IconButton>
+                    </form>
+                </Box>
+            ) : (
+                <LogoutButton onLogout={handleLogout} />
+            )}
         </>
     );
 
@@ -222,11 +277,11 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
                     open={isMobile ? drawerOpen : true}
                     onClose={() => setDrawerOpen(false)}
                     sx={{
-                        width: 240,
+                        width: isMobile ? 240 : (miniEffective ? 72 : 240),
                         flexShrink: 0,
                         display: { xs: 'block', md: 'block' },
                         [`& .MuiDrawer-paper`]: {
-                            width: 240,
+                            width: isMobile ? 240 : (miniEffective ? 72 : 240),
                             boxSizing: 'border-box',
                             display: 'flex',
                             flexDirection: 'column',
@@ -234,6 +289,7 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
                             bgcolor: 'background.paper',
                             p: 2,
                             borderRadius: 0,
+                            transition: 'width 0.2s ease',
                         },
                     }}
                     ModalProps={{

@@ -33,7 +33,7 @@ class Control extends Model
 
     public function limitValues()
     {
-        return $this->hasMany(LimitValue::class);
+        return $this->hasOne(LimitValue::class);
     }
 
     public function scopeActive($query)

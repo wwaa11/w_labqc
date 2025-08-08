@@ -26,41 +26,43 @@ export default function AssetsMain() {
                     <Button variant="contained" onClick={() => router.get(route('assets.create'))} sx={{ width: { xs: '100%', md: 'auto' } }}>Add Asset</Button>
                 </Box>
                 <Paper sx={{ p: { xs: 2, md: 3 }, overflowX: 'auto' }}>
-                    <Box sx={{ minWidth: 900 }}>
-                        <DataGrid
-                            autoHeight
-                            rows={(assets || []).map((a: any) => ({
-                                id: a.id,
-                                name: a.name,
-                                type: a.asset_type?.asset_type_name ?? '-',
-                                brand: a.brand ?? '-',
-                                model: a.model ?? '-',
-                                serial: a.serial_number ?? '-',
-                                location: a.location ?? '-',
-                            }))}
-                            columns={[
-                                { field: 'name', headerName: 'Asset', flex: 1, minWidth: 180 },
-                                { field: 'type', headerName: 'Asset Type', flex: 1, minWidth: 180 },
-                                { field: 'brand', headerName: 'Brand', flex: 0.8, minWidth: 140 },
-                                { field: 'model', headerName: 'Model', flex: 0.8, minWidth: 140 },
-                                { field: 'serial', headerName: 'Serial', flex: 0.8, minWidth: 160 },
-                                { field: 'location', headerName: 'Location', flex: 0.8, minWidth: 160 },
-                                {
-                                    field: 'actions', headerName: 'Actions', width: 160, sortable: false, filterable: false,
-                                    renderCell: (params) => (
-                                        <Box>
-                                            <IconButton size="small" onClick={() => router.get(route('assets.edit', params.id))}><EditIcon /></IconButton>
-                                            <IconButton size="small" color="error" onClick={() => onDelete(Number(params.id))}><DeleteIcon /></IconButton>
-                                        </Box>
-                                    )
-                                }
-                            ] as GridColDef[]}
-                            pageSizeOptions={[10, 25, 50]}
-                            initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
-                            disableRowSelectionOnClick
-                            sx={{ '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}
-                        />
-                    </Box>
+                    <DataGrid
+                        autoHeight
+                        rows={(assets || []).map((a: any) => ({
+                            id: a.id,
+                            name: a.name,
+                            type: a.asset_type?.asset_type_name ?? '-',
+                            brand: a.brand ?? '-',
+                            model: a.model ?? '-',
+                            serial: a.serial_number ?? '-',
+                            location: a.location ?? '-',
+                        }))}
+                        columns={[
+                            { field: 'name', headerName: 'Asset', flex: 1, minWidth: 180 },
+                            { field: 'type', headerName: 'Asset Type', flex: 1, minWidth: 180 },
+                            { field: 'brand', headerName: 'Brand', flex: 0.8, minWidth: 140 },
+                            { field: 'model', headerName: 'Model', flex: 0.8, minWidth: 140 },
+                            { field: 'serial', headerName: 'Serial', flex: 0.8, minWidth: 160 },
+                            { field: 'location', headerName: 'Location', flex: 0.8, minWidth: 160 },
+                            {
+                                field: 'actions', headerName: 'Actions', width: 160, sortable: false, filterable: false,
+                                renderCell: (params) => (
+                                    <Box>
+                                        <IconButton size="small" onClick={() => router.get(route('assets.edit', params.id))}><EditIcon /></IconButton>
+                                        <IconButton size="small" color="error" onClick={() => onDelete(Number(params.id))}><DeleteIcon /></IconButton>
+                                    </Box>
+                                )
+                            }
+                        ] as GridColDef[]}
+                        pageSizeOptions={[10, 25, 50]}
+                        initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                        disableRowSelectionOnClick
+                        disableColumnMenu
+                        hideFooterSelectedRowCount
+                        sx={{
+                            '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' },
+                        }}
+                    />
                 </Paper>
                 <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs">
                     <DialogTitle>Delete Asset</DialogTitle>

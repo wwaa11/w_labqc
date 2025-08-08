@@ -440,36 +440,36 @@ export default function AssetTypesMain() {
                 ) : (
                     <>
                         <Box sx={{ width: '100%', overflowX: 'auto' }}>
-                            <Box sx={{ minWidth: 700 }}>
-                                <DataGrid
-                                    autoHeight
-                                    rows={filteredAssetTypes.map((at: any) => ({
-                                        id: at.id,
-                                        name: at.asset_type_name,
-                                    }))}
-                                    columns={[
-                                        { field: 'id', headerName: 'ID', width: 80 },
-                                        { field: 'name', headerName: 'Asset Type', flex: 1, minWidth: 220 },
-                                        {
-                                            field: 'actions', headerName: 'Actions', width: 140, sortable: false, filterable: false,
-                                            renderCell: (params) => (
-                                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                                    <IconButton size="small" onClick={() => handleEdit(Number(params.id))} aria-label="Edit">
-                                                        <EditIcon />
-                                                    </IconButton>
-                                                    <IconButton size="small" color="error" onClick={() => handleDelete({ id: params.id, asset_type_name: params.row.name })} aria-label="Delete">
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </Box>
-                                            )
-                                        }
-                                    ] as GridColDef[]}
-                                    pageSizeOptions={[10, 25, 50]}
-                                    initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
-                                    disableRowSelectionOnClick
-                                    sx={{ '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}
-                                />
-                            </Box>
+                            <DataGrid
+                                autoHeight
+                                rows={filteredAssetTypes.map((at: any) => ({
+                                    id: at.id,
+                                    name: at.asset_type_name,
+                                }))}
+                                columns={[
+                                    { field: 'id', headerName: 'ID', width: 80 },
+                                    { field: 'name', headerName: 'Asset Type', flex: 1, minWidth: 220 },
+                                    {
+                                        field: 'actions', headerName: 'Actions', width: 140, sortable: false, filterable: false,
+                                        renderCell: (params) => (
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <IconButton size="small" onClick={() => handleEdit(Number(params.id))} aria-label="Edit">
+                                                    <EditIcon />
+                                                </IconButton>
+                                                <IconButton size="small" color="error" onClick={() => handleDelete({ id: params.id, asset_type_name: params.row.name })} aria-label="Delete">
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Box>
+                                        )
+                                    }
+                                ] as GridColDef[]}
+                                pageSizeOptions={[10, 25, 50]}
+                                initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                                disableRowSelectionOnClick
+                                disableColumnMenu
+                                hideFooterSelectedRowCount
+                                sx={{ '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}
+                            />
                         </Box>
                     </>
                 )}

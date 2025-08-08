@@ -70,6 +70,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('control_type_id');
             $table->string('record_value');
+            $table->string('record_result')->nullable();
             $table->string('verified_by')->nullable();
             $table->string('approved_by')->nullable();
             $table->string('memo')->nullable();

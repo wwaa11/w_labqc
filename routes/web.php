@@ -15,6 +15,10 @@ Route::controller(AuthenticatedSessionController::class)->group(function () {
 // Authenticated application routes
 Route::middleware(['auth'])->group(function () {
 
+    Route::get('/', function () {
+        return redirect()->route('users.dashboard');
+    })->name('index');
+
     Route::prefix('users')->as('users.')->controller(WebController::class)->group(function () {
         Route::get('dashboard', 'UserAssets')->name('dashboard');
         Route::post('records/store', 'RecordsStore')->name('records.store');

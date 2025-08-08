@@ -33,6 +33,11 @@ class ControlType extends Model
         return $this->hasMany(Record::class);
     }
 
+    public function latestRecord()
+    {
+        return $this->hasOne(Record::class)->latestOfMany();
+    }
+
     // Scope to exclude soft-deleted rows
     public function scopeNotDeleted($query)
     {

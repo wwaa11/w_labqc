@@ -33,8 +33,66 @@ class WebController extends Controller
                 'assetType.controlTypes'                      => function ($q) {$q->notDeleted();},
                 'assetType.controlTypes.controls'             => function ($q) {$q->where('is_deleted', false)->active();},
                 'assetType.controlTypes.controls.limitValues' => function ($q) {$q->where('is_deleted', false);},
+                // Load latest non-deleted record per control type via relation
+                'assetType.controlTypes.latestRecord'         => function ($q) {$q->where('is_deleted', false);},
             ])
             ->get();
+
+        // Prepare UI-friendly fields for the frontend (move presentation logic to backend)
+        $assets = $assets->map(function ($asset) {
+            if (! $asset->relationLoaded('assetType') || ! $asset->assetType) {
+                return $asset;
+            }
+
+            $asset->assetType->setRelation('controlTypes', $asset->assetType->controlTypes->map(function ($ct) {
+                $ct->setRelation('controls', $ct->controls->map(function ($control) {
+                    // Normalize limit values array for consistent frontend usage
+                    $normalized = $control->limitValues->map(function ($lv) {
+                        return [
+                            'min_value'    => $lv->min_value,
+                            'max_value'    => $lv->max_value,
+                            'option_value' => $lv->option_value,
+                            'text_value'   => $lv->text_value,
+                        ];
+                    })->values();
+                    $control->setAttribute('limit_values_normalized', $normalized);
+
+                    // Provide UI helpers based on limit type
+                    if ($control->limit_type === 'range') {
+                        $lv     = $control->limitValues->first();
+                        $minStr = $lv?->min_value ?? '';
+                        $maxStr = $lv?->max_value ?? '';
+                        $hasMin = $minStr !== '' && $minStr !== null;
+                        $hasMax = $maxStr !== '' && $maxStr !== null;
+                        $label  = ($hasMin || $hasMax)
+                            ? ($hasMin ? $minStr : '') . ($hasMin && $hasMax ? ' - ' : '') . ($hasMax ? $maxStr : '')
+                            : '';
+
+                        $control->setAttribute('ui_input_type', 'number');
+                        $control->setAttribute('ui_label', $label ?: 'Range');
+                        $control->setAttribute('ui_min', $hasMin ? (float) $minStr : null);
+                        $control->setAttribute('ui_max', $hasMax ? (float) $maxStr : null);
+                    } elseif ($control->limit_type === 'option') {
+                        $options = $control->limitValues
+                            ->pluck('option_value')
+                            ->filter(function ($v) {return $v !== null && $v !== '';})
+                            ->values();
+                        $control->setAttribute('ui_input_type', 'select');
+                        $control->setAttribute('ui_options', $options);
+                        $control->setAttribute('ui_label', 'Result');
+                    } else { // text
+                        $control->setAttribute('ui_input_type', 'text');
+                        $control->setAttribute('ui_label', 'Result');
+                    }
+
+                    return $control;
+                }));
+
+                return $ct;
+            }));
+
+            return $asset;
+        });
 
         return inertia('users/dashboard', [
             'assets' => $assets,
@@ -50,38 +108,32 @@ class WebController extends Controller
             'memo'            => 'nullable|string|max:1000',
         ]);
 
-        $controlType   = ControlType::findOrFail($validated['control_type_id']);
-        $activeControl = Control::where('control_type_id', $controlType->id)
-            ->where('is_deleted', false)
-            ->active()
-            ->with(['limitValues' => function ($q) {$q->where('is_deleted', false);}])
-            ->first();
-
-        if (! $activeControl) {
-            return back()->with('error', 'No active control found for this type.');
+        $controlType = ControlType::findOrFail($validated['control_type_id']);
+        // Use the active control for this control type
+        $control = Control::where('control_type_id', $controlType->id)->where('is_active', true)->with(['limitValues' => function ($q) {
+            $q->where('is_deleted', false);
+        }])->first();
+        if (! $control) {
+            return back()->with('error', 'No active control for this control type.');
         }
-
         $value = $validated['record_value'];
-        if ($activeControl->limit_type === 'range') {
-            $lv  = $activeControl->limitValues->first();
-            $num = is_numeric($value) ? (float) $value : null;
-            if ($lv && ($num === null || ($lv->min_value !== null && $num < (float) $lv->min_value) || ($lv->max_value !== null && $num > (float) $lv->max_value))) {
-                return back()->with('error', 'Value is out of allowed range.');
-            }
-        } elseif ($activeControl->limit_type === 'option') {
-            $allowed = $activeControl->limitValues->pluck('option_value')->filter()->values()->all();
-            if (! in_array($value, $allowed, true)) {
-                return back()->with('error', 'Value is not within allowed options.');
-            }
-        } elseif ($activeControl->limit_type === 'text') {
-            if (trim($value) === '') {
-                return back()->with('error', 'Text value cannot be empty.');
+
+        $result = null;
+        if ($control->limit_type == 'range') {
+            $lv       = $control->limitValues->first();
+            $minValue = $lv?->min_value;
+            $maxValue = $lv?->max_value;
+            if ($minValue !== null && $maxValue !== null && $value >= $minValue && $value <= $maxValue) {
+                $result = 'PASS';
+            } else {
+                $result = 'FAIL';
             }
         }
 
         $record                  = new \App\Models\Record();
         $record->control_type_id = $controlType->id;
         $record->record_value    = $value;
+        $record->record_result   = $result;
         $record->verified_by     = auth()->user() ? (auth()->user()->user_id ?? auth()->user()->name ?? null) : null;
         $record->approved_by     = null;
         $record->memo            = $validated['memo'] ?? null;

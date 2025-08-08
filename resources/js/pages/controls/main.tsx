@@ -37,10 +37,13 @@ export default function ControlsMain() {
                     <Button variant="contained" onClick={() => router.get(route('controls.create'))} sx={{ width: { xs: '100%', md: 'auto' } }}>Add Control</Button>
                 </Box>
                 <Paper sx={{ p: { xs: 2, md: 3 }, overflowX: 'auto' }}>
-                    <Box sx={{ minWidth: 1000 }}>
-                        <DataGrid
-                            autoHeight
-                            rows={(controls || []).map((c: any) => ({
+                    <DataGrid
+                        autoHeight
+                        rows={(controls || []).map((c: any) => {
+                            const normalizedLimitValues: any[] = Array.isArray(c.limit_values)
+                                ? c.limit_values
+                                : (c.limit_values ? Object.values(c.limit_values) : []);
+                            return ({
                                 id: c.id,
                                 name: c.control_name,
                                 type: (c.control_type && c.control_type.control_type_name) ? c.control_type.control_type_name : '-',
@@ -50,44 +53,48 @@ export default function ControlsMain() {
                                 isActive: !!c.is_active,
                                 values: (() => {
                                     if (c.limit_type === 'range') {
-                                        const v = c.limit_values?.[0];
+                                        const v = normalizedLimitValues?.[0];
                                         return v ? `${v.min_value ?? ''} - ${v.max_value ?? ''}` : '-';
                                     } else if (c.limit_type === 'option') {
-                                        return (c.limit_values || []).map((lv: any) => lv.option_value).filter(Boolean).join(', ');
+                                        return normalizedLimitValues.map((lv: any) => lv.option_value).filter(Boolean).join(', ');
                                     } else if (c.limit_type === 'text') {
-                                        const v = c.limit_values?.[0];
+                                        const v = normalizedLimitValues?.[0];
                                         return v?.text_value ?? '-';
                                     }
                                     return '-';
                                 })(),
-                            }))}
-                            columns={[
-                                { field: 'name', headerName: 'Control', flex: 1, minWidth: 180 },
-                                { field: 'type', headerName: 'Control Type', flex: 1, minWidth: 120 },
-                                { field: 'limitType', headerName: 'Limit Type', flex: 0.7, minWidth: 120 },
-                                { field: 'expired', headerName: 'Expired', flex: 0.6, minWidth: 120 },
-                                { field: 'values', headerName: 'Values', flex: 1, minWidth: 200 },
-                                { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 200 },
-                                { field: 'isActive', headerName: 'Active', width: 120, renderCell: (params) => params.value ? <Chip color="success" label="Active" size="small" /> : <Chip label="Inactive" size="small" /> },
-                                {
-                                    field: 'actions', headerName: 'Actions', width: 200, sortable: false, filterable: false,
-                                    renderCell: (params) => (
-                                        <Box>
-                                            {!params.row.isActive && (
-                                                <Button size="small" startIcon={<CheckIcon />} onClick={() => router.post(route('controls.setActive', params.id))}>Set Active</Button>
-                                            )}
-                                            <IconButton size="small" onClick={() => router.get(route('controls.edit', params.id))}><EditIcon /></IconButton>
-                                            <IconButton size="small" color="error" onClick={() => onDelete(Number(params.id))}><DeleteIcon /></IconButton>
-                                        </Box>
-                                    )
-                                }
-                            ] as GridColDef[]}
-                            pageSizeOptions={[10, 25, 50]}
-                            initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
-                            disableRowSelectionOnClick
-                            sx={{ '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}
-                        />
-                    </Box>
+                            })
+                        })}
+                        columns={[
+                            { field: 'name', headerName: 'Control', flex: 1, minWidth: 180 },
+                            { field: 'type', headerName: 'Control Type', flex: 1, minWidth: 120 },
+                            { field: 'limitType', headerName: 'Limit Type', flex: 0.7, minWidth: 120 },
+                            { field: 'expired', headerName: 'Expired', flex: 0.6, minWidth: 120 },
+                            { field: 'values', headerName: 'Values', flex: 1, minWidth: 200 },
+                            { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 200 },
+                            { field: 'isActive', headerName: 'Active', width: 120, renderCell: (params) => params.value ? <Chip color="success" label="Active" size="small" /> : <Chip label="Inactive" size="small" /> },
+                            {
+                                field: 'actions', headerName: 'Actions', width: 200, sortable: false, filterable: false,
+                                renderCell: (params) => (
+                                    <Box>
+                                        {!params.row.isActive && (
+                                            <Button size="small" startIcon={<CheckIcon />} onClick={() => router.post(route('controls.setActive', params.id))}>Set Active</Button>
+                                        )}
+                                        <IconButton size="small" onClick={() => router.get(route('controls.edit', params.id))}><EditIcon /></IconButton>
+                                        <IconButton size="small" color="error" onClick={() => onDelete(Number(params.id))}><DeleteIcon /></IconButton>
+                                    </Box>
+                                )
+                            }
+                        ] as GridColDef[]}
+                        pageSizeOptions={[10, 25, 50]}
+                        initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                        disableRowSelectionOnClick
+                        disableColumnMenu
+                        hideFooterSelectedRowCount
+                        sx={{
+                            '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' },
+                        }}
+                    />
                 </Paper>
                 <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs">
                     <DialogTitle>Delete Control</DialogTitle>

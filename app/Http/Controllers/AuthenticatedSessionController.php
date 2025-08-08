@@ -55,7 +55,7 @@ class AuthenticatedSessionController extends Controller
 
                 Auth::login($user);
                 $request->session()->regenerate();
-                return redirect()->intended(route('index'));
+                return redirect()->intended(route('users.dashboard'));
             }
 
             return back()->withErrors(['userid' => 'User not found']);
@@ -65,7 +65,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('index'));
+        return redirect()->intended(route('users.dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse

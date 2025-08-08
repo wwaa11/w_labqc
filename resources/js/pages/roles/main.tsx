@@ -43,7 +43,7 @@ export default function UsersMain() {
     };
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(route('users.store'), {
+        router.post(route('roles.store'), {
             userid: userId,
             location: selectedLocation,
         });
@@ -57,7 +57,7 @@ export default function UsersMain() {
     };
     const handleAdminSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(route('users.admin'), {
+        router.post(route('roles.admin'), {
             userid: adminUserId,
         });
         handleAdminClose();
@@ -75,7 +75,7 @@ export default function UsersMain() {
     };
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(route('users.store', editUserId), {
+        router.post(route('roles.store', editUserId), {
             userid: editUserId,
             location: editLocation,
         });
@@ -83,14 +83,14 @@ export default function UsersMain() {
     };
     const handleDelete = (userId: string) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
-            router.delete(route('users.destroy', userId));
+            router.delete(route('roles.destroy', userId));
         }
     };
 
     const [loading, setLoading] = useState(false);
     const handleSearch = () => {
         setLoading(true);
-        router.get(route('users.main'), { search: input }, { preserveState: true, replace: true, onFinish: () => setLoading(false) });
+        router.get(route('roles.main'), { search: input }, { preserveState: true, replace: true, onFinish: () => setLoading(false) });
     };
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') handleSearch();
@@ -99,11 +99,11 @@ export default function UsersMain() {
         setInput('');
         setSearch('');
         setLoading(true);
-        router.get(route('users.main'), {}, { preserveState: true, replace: true, onFinish: () => setLoading(false) });
+        router.get(route('roles.main'), {}, { preserveState: true, replace: true, onFinish: () => setLoading(false) });
     };
     const handleMassAssign = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(route('users.massAssignLocation'), {
+        router.post(route('roles.massAssignLocation'), {
             user_ids: massUserIds,
             location: massLocation,
         }, {
