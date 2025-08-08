@@ -1,86 +1,48 @@
-import { useCallback, useEffect, useState, createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 export type Appearance = 'light' | 'dark' | 'system';
 
-const prefersDark = () => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-};
-
-const setCookie = (name: string, value: string, days = 365) => {
-    if (typeof document === 'undefined') {
-        return;
-    }
-    const maxAge = days * 24 * 60 * 60;
-    document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
-};
-
-const applyTheme = (appearance: Appearance) => {
-    const isDark = appearance === 'dark' || (appearance === 'system' && prefersDark());
-    document.documentElement.classList.toggle('dark', isDark);
-};
-
-const mediaQuery = () => {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)');
-};
-
-const handleSystemThemeChange = () => {
-    const currentAppearance = localStorage.getItem('appearance') as Appearance;
-    applyTheme(currentAppearance || 'system');
-};
-
-export function initializeTheme() {
-    const savedAppearance = (localStorage.getItem('appearance') as Appearance) || 'system';
-    applyTheme(savedAppearance);
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
-}
-
-// --- Context Implementation ---
 interface AppearanceContextType {
     appearance: Appearance;
-    updateAppearance: (mode: Appearance) => void;
+    setAppearance: (value: Appearance) => void;
+    toggleAppearance: () => void;
 }
 
 const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
-    const [appearance, setAppearance] = useState<Appearance>('system');
+    const [appearance, setAppearanceState] = useState<Appearance>('system');
 
-    const updateAppearance = useCallback((mode: Appearance) => {
-        setAppearance(mode);
-        localStorage.setItem('appearance', mode);
-        setCookie('appearance', mode);
-        applyTheme(mode);
+    // Load persisted preference
+    useEffect(() => {
+        try {
+            const saved = window.localStorage.getItem('appearance') as Appearance | null;
+            if (saved === 'light' || saved === 'dark' || saved === 'system') {
+                setAppearanceState(saved);
+            }
+        } catch { }
     }, []);
 
-    useEffect(() => {
-        const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
-        setAppearance(savedAppearance || 'system');
-        applyTheme(savedAppearance || 'system');
-        return () => mediaQuery()?.removeEventListener('change', handleSystemThemeChange);
+    const setAppearance = useCallback((value: Appearance) => {
+        setAppearanceState(value);
+        try {
+            window.localStorage.setItem('appearance', value);
+        } catch { }
     }, []);
 
-    // Listen for system theme changes if in 'system' mode
-    useEffect(() => {
-        if (appearance === 'system') {
-            const mq = mediaQuery();
-            mq?.addEventListener('change', () => {
-                applyTheme('system');
-            });
-            return () => mq?.removeEventListener('change', handleSystemThemeChange);
-        }
-    }, [appearance]);
+    const toggleAppearance = useCallback(() => {
+        setAppearanceState((prev) => {
+            const next: Appearance = prev === 'system' ? 'light' : prev === 'light' ? 'dark' : 'system';
+            try {
+                window.localStorage.setItem('appearance', next);
+            } catch { }
+            return next;
+        });
+    }, []);
 
-    return (
-        <AppearanceContext.Provider value={{ appearance, updateAppearance }}>
-            {children}
-        </AppearanceContext.Provider>
-    );
+    const value = useMemo<AppearanceContextType>(() => ({ appearance, setAppearance, toggleAppearance }), [appearance, setAppearance, toggleAppearance]);
+
+    return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;
 }
 
 export function useAppearance() {

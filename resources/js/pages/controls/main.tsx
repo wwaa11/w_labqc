@@ -1,147 +1,105 @@
+import { usePage, Head, router } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { usePage, router, Head } from '@inertiajs/react';
-import React, { useState, useEffect } from 'react';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { Button, Box, Typography } from '@mui/material';
-import TextField from '@mui/material/TextField';
-import SearchIcon from '@mui/icons-material/Search';
-import Paper from '@mui/material/Paper';
-import { useTheme } from '@mui/material/styles';
-import CloseIcon from '@mui/icons-material/Close';
+import { Box, Typography, Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import CheckIcon from '@mui/icons-material/CheckCircleOutline';
+import { useState } from 'react';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
-export default function ControlMain() {
+export default function ControlsMain() {
     const { controls } = usePage().props as any;
-    const [search, setSearch] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('search') || '';
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+
+    const onDelete = (id: number) => {
+        setDeleteId(id);
+        setConfirmOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (deleteId != null) {
+            router.delete(route('controls.destroy', deleteId));
         }
-        return '';
-    });
-    const [input, setInput] = useState(search);
-
-    useEffect(() => {
-        setInput(search);
-    }, [search]);
-
-    const handleSearch = () => {
-        router.get(route('controls.main'), { search: input }, { preserveState: true, replace: true });
+        setConfirmOpen(false);
+        setDeleteId(null);
     };
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') handleSearch();
-    };
-
-    const handleReset = () => {
-        setInput('');
-        setSearch('');
-        router.get(route('controls.main'), {}, { preserveState: true, replace: true });
-    };
-
-    const handleDelete = (id: number) => {
-        if (window.confirm('Are you sure you want to delete this control?')) {
-            router.delete(route('controls.destroy', id));
-        }
-    };
-
-    const handleEdit = (id: number) => {
-        router.visit(route('controls.edit', id));
-    };
-
-    const handleCreate = () => {
-        router.visit(route('controls.create'));
-    };
-
-    const columns: GridColDef[] = [
-        { field: 'id', headerName: 'ID', width: 90 },
-        { field: 'name', headerName: 'Name', flex: 1 },
-        { field: 'limit', headerName: 'Control', flex: 1 },
-        { field: 'expired', headerName: 'Expired', flex: 1 },
-        {
-            field: 'actions',
-            headerName: 'Actions',
-            width: 200,
-            sortable: false,
-            filterable: false,
-            renderCell: (params: GridRenderCellParams) => (
-                <>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleEdit(params.row.id)}
-                        sx={{ mr: 1 }}
-                        aria-label={`Edit control ${params.row.name}`}
-                    >
-                        Edit
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        onClick={() => handleDelete(params.row.id)}
-                        aria-label={`Delete control ${params.row.name}`}
-                    >
-                        Delete
-                    </Button>
-                </>
-            ),
-        },
-    ];
-
-    const theme = useTheme();
 
     return (
         <DashboardLayout>
             <Head title="Controls" />
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Typography variant="h4" fontWeight="bold">Controls</Typography>
-                <Paper
-                    component="form"
-                    onSubmit={e => { e.preventDefault(); handleSearch(); }}
-                    sx={{ display: 'flex', alignItems: 'center', borderRadius: '5px', boxShadow: 0, px: 1, py: 0.5, mr: 2, minWidth: 260, bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : 'background.paper' }}
-                    elevation={1}
-                >
-                    <TextField
-                        label="Search by name"
-                        size="small"
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        variant="standard"
-                        InputProps={{ disableUnderline: true }}
-                        sx={{ flex: 1, minWidth: 120, bgcolor: 'transparent', pr: 1 }}
-                    />
-                    <Button type="submit" variant="text" color="primary" sx={{ minWidth: 40, p: 1 }} aria-label="Search">
-                        <SearchIcon />
-                    </Button>
-                    {input && (
-                        <Button type="button" variant="text" color="secondary" sx={{ minWidth: 40, p: 1 }} aria-label="Reset filter" onClick={handleReset}>
-                            <CloseIcon />
-                        </Button>
-                    )}
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' }, mb: 3, gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+                    <Box>
+                        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Controls</Typography>
+                        <Typography variant="body1" color="text.secondary">Manage controls and their limit values</Typography>
+                    </Box>
+                    <Button variant="contained" onClick={() => router.get(route('controls.create'))} sx={{ width: { xs: '100%', md: 'auto' } }}>Add Control</Button>
+                </Box>
+                <Paper sx={{ p: { xs: 2, md: 3 }, overflowX: 'auto' }}>
+                    <Box sx={{ minWidth: 1000 }}>
+                        <DataGrid
+                            autoHeight
+                            rows={(controls || []).map((c: any) => ({
+                                id: c.id,
+                                name: c.control_name,
+                                type: (c.control_type && c.control_type.control_type_name) ? c.control_type.control_type_name : '-',
+                                limitType: c.limit_type,
+                                expired: c.expired ? new Date(c.expired).toLocaleDateString() : '-',
+                                memo: c.memo ?? '-',
+                                isActive: !!c.is_active,
+                                values: (() => {
+                                    if (c.limit_type === 'range') {
+                                        const v = c.limit_values?.[0];
+                                        return v ? `${v.min_value ?? ''} - ${v.max_value ?? ''}` : '-';
+                                    } else if (c.limit_type === 'option') {
+                                        return (c.limit_values || []).map((lv: any) => lv.option_value).filter(Boolean).join(', ');
+                                    } else if (c.limit_type === 'text') {
+                                        const v = c.limit_values?.[0];
+                                        return v?.text_value ?? '-';
+                                    }
+                                    return '-';
+                                })(),
+                            }))}
+                            columns={[
+                                { field: 'name', headerName: 'Control', flex: 1, minWidth: 180 },
+                                { field: 'type', headerName: 'Control Type', flex: 1, minWidth: 120 },
+                                { field: 'limitType', headerName: 'Limit Type', flex: 0.7, minWidth: 120 },
+                                { field: 'expired', headerName: 'Expired', flex: 0.6, minWidth: 120 },
+                                { field: 'values', headerName: 'Values', flex: 1, minWidth: 200 },
+                                { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 200 },
+                                { field: 'isActive', headerName: 'Active', width: 120, renderCell: (params) => params.value ? <Chip color="success" label="Active" size="small" /> : <Chip label="Inactive" size="small" /> },
+                                {
+                                    field: 'actions', headerName: 'Actions', width: 200, sortable: false, filterable: false,
+                                    renderCell: (params) => (
+                                        <Box>
+                                            {!params.row.isActive && (
+                                                <Button size="small" startIcon={<CheckIcon />} onClick={() => router.post(route('controls.setActive', params.id))}>Set Active</Button>
+                                            )}
+                                            <IconButton size="small" onClick={() => router.get(route('controls.edit', params.id))}><EditIcon /></IconButton>
+                                            <IconButton size="small" color="error" onClick={() => onDelete(Number(params.id))}><DeleteIcon /></IconButton>
+                                        </Box>
+                                    )
+                                }
+                            ] as GridColDef[]}
+                            pageSizeOptions={[10, 25, 50]}
+                            initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                            disableRowSelectionOnClick
+                            sx={{ '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}
+                        />
+                    </Box>
                 </Paper>
-                <Button variant="contained" color="primary" size="large" sx={{ borderRadius: 2, fontWeight: 600 }} onClick={handleCreate} aria-label="Create new control">
-                    Create New Control
-                </Button>
-            </Box>
-            <Box sx={{ height: 500, width: '100%', bgcolor: 'background.paper', borderRadius: 3, boxShadow: 1, p: 2 }}>
-                <DataGrid
-                    rows={controls || []}
-                    columns={columns}
-                    pageSizeOptions={[10, 25, 50]}
-                    initialState={{
-                        pagination: { paginationModel: { pageSize: 10, page: 0 } },
-                    }}
-                    disableRowSelectionOnClick
-                    getRowId={(row) => row.id}
-                    sx={{
-                        borderRadius: 2,
-                        border: 'none',
-                        '& .MuiDataGrid-columnHeaders': { bgcolor: 'grey.100', fontWeight: 700 },
-                        '& .MuiDataGrid-row': { bgcolor: 'background.default' },
-                        '& .MuiDataGrid-cell': { py: 1 },
-                    }}
-                />
+                <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs">
+                    <DialogTitle>Delete Control</DialogTitle>
+                    <DialogContent>Are you sure you want to delete this control?</DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                        <Button color="error" variant="contained" onClick={confirmDelete}>Delete</Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         </DashboardLayout>
     );
 }
+
+

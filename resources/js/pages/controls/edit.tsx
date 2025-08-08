@@ -1,106 +1,126 @@
+import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { usePage, router } from '@inertiajs/react';
-import { Box, Typography, TextField, Button, Paper, Grid } from '@mui/material';
-import { useState } from 'react';
-import dayjs from 'dayjs';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem, Alert, IconButton } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/RemoveCircleOutline';
 
-export default function ControlEdit() {
-    const { control } = usePage().props as any;
-    const [form, setForm] = useState({
-        name: control.name || '',
-        limit: control.limit || '',
-        brand: control.brand || '',
-        lot: control.lot || '',
-        expired: control.expired ? dayjs(control.expired).format('YYYY-MM-DD') : '',
-        memo: control.memo || '',
-    });
-    const [processing, setProcessing] = useState(false);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+export default function ControlsEdit() {
+    const { control, controlTypes, errors } = usePage().props as any;
+    const initial = {
+        control_name: control?.control_name || '',
+        control_type_id: control?.control_type_id?.toString() || '',
+        brand: control?.brand || '',
+        lot: control?.lot || '',
+        expired: control?.expired ? String(control.expired).slice(0, 10) : '',
+        limit_type: (control?.limit_type || 'range') as 'range' | 'option' | 'text',
+        min_value: control?.limit_values?.[0]?.min_value || '',
+        max_value: control?.limit_values?.[0]?.max_value || '',
+        options: (control?.limit_values || []).map((lv: any) => lv.option_value).filter(Boolean),
+        text_value: control?.limit_values?.[0]?.text_value || '',
+        memo: control?.memo || '',
     };
+    const { data, setData, post, processing } = useForm(initial);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        router.post(route('controls.update', control.id), form, {
-            onFinish: () => setProcessing(false),
-        });
+        post(route('controls.update', control.id));
     };
+
+    const addOption = () => setData('options', [...data.options, '']);
+    const removeOption = (idx: number) => setData('options', data.options.filter((_: string, i: number) => i !== idx));
+    const updateOption = (idx: number, value: string) => setData('options', data.options.map((v: string, i: number) => (i === idx ? value : v)));
 
     return (
         <DashboardLayout>
-            <Box py={4}>
-                <Typography variant="h4" fontWeight="bold" mb={2}>
-                    Edit Control
-                </Typography>
-                <Paper sx={{ maxWidth: 500, mx: 'auto', p: 4 }}>
-                    <form onSubmit={handleSubmit}>
-                        <Grid container spacing={2}>
+            <Head title="Edit Control" />
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Edit Control</Typography>
+                    <Typography variant="body1" color="text.secondary">Update control information and limits</Typography>
+                </Box>
+
+                <Paper sx={{ p: { xs: 2, md: 3 } }}>
+                    <form onSubmit={onSubmit}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth label="Control Name" value={data.control_name} onChange={(e) => setData('control_name', e.target.value)} required error={!!errors?.control_name} helperText={errors?.control_name} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth error={!!errors?.control_type_id}>
+                                    <InputLabel id="ct-label">Control Type</InputLabel>
+                                    <Select labelId="ct-label" label="Control Type" value={data.control_type_id} onChange={(e) => setData('control_type_id', e.target.value)} required>
+                                        {controlTypes.map((ct: any) => (
+                                            <MenuItem key={ct.id} value={ct.id}>
+                                                {ct.asset_type?.asset_type_name ? `${ct.asset_type.asset_type_name} - ${ct.control_type_name}` : ct.control_type_name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Brand" value={data.brand} onChange={(e) => setData('brand', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Lot" value={data.lot} onChange={(e) => setData('lot', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth type="date" label="Expired" value={data.expired} onChange={(e) => setData('expired', e.target.value)} InputLabelProps={{ shrink: true }} />
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="lt-label">Limit Type</InputLabel>
+                                    <Select labelId="lt-label" label="Limit Type" value={data.limit_type} onChange={(e) => setData('limit_type', e.target.value as any)}>
+                                        <MenuItem value="range">Range</MenuItem>
+                                        <MenuItem value="option">Option</MenuItem>
+                                        <MenuItem value="text">Text</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {data.limit_type === 'range' && (
+                                <>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField fullWidth label="Min Value" value={data.min_value} onChange={(e) => setData('min_value', e.target.value)} required error={!!errors?.min_value} helperText={errors?.min_value} />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField fullWidth label="Max Value" value={data.max_value} onChange={(e) => setData('max_value', e.target.value)} required error={!!errors?.max_value} helperText={errors?.max_value} />
+                                    </Grid>
+                                </>
+                            )}
+
+                            {data.limit_type === 'option' && (
+                                <Grid item xs={12}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        {data.options.map((opt: string, idx: number) => (
+                                            <Box key={idx} sx={{ display: 'flex', gap: 1 }}>
+                                                <TextField fullWidth label={`Option ${idx + 1}`} value={opt} onChange={(e) => updateOption(idx, e.target.value)} />
+                                                <IconButton aria-label="remove option" onClick={() => removeOption(idx)} disabled={data.options.length <= 1}>
+                                                    <RemoveIcon />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
+                                        <Button onClick={addOption} startIcon={<AddIcon />} variant="outlined">Add Option</Button>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            {data.limit_type === 'text' && (
+                                <Grid item xs={12} md={6}>
+                                    <TextField fullWidth label="Text Value" value={data.text_value} onChange={(e) => setData('text_value', e.target.value)} required error={!!errors?.text_value} helperText={errors?.text_value} />
+                                </Grid>
+                            )}
+
                             <Grid item xs={12}>
-                                <TextField
-                                    label="Name"
-                                    name="name"
-                                    value={form.name}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    required
-                                />
+                                <TextField fullWidth label="Memo" value={data.memo} onChange={(e) => setData('memo', e.target.value)} multiline minRows={3} />
                             </Grid>
+
                             <Grid item xs={12}>
-                                <TextField
-                                    label="Limit"
-                                    name="limit"
-                                    value={form.limit}
-                                    onChange={handleChange}
-                                    fullWidth
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    label="Brand"
-                                    name="brand"
-                                    value={form.brand}
-                                    onChange={handleChange}
-                                    fullWidth
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    label="Lot"
-                                    name="lot"
-                                    value={form.lot}
-                                    onChange={handleChange}
-                                    fullWidth
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    label="Expired"
-                                    name="expired"
-                                    type="date"
-                                    value={form.expired}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    InputLabelProps={{ shrink: true }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    label="Memo"
-                                    name="memo"
-                                    value={form.memo}
-                                    onChange={handleChange}
-                                    fullWidth
-                                />
-                            </Grid>
-                            <Grid item xs={12} display="flex" justifyContent="flex-end" gap={2}>
-                                <Button variant="outlined" color="secondary" onClick={() => router.visit(route('controls.main'))}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" variant="contained" color="primary" disabled={processing}>
-                                    Save
-                                </Button>
+                                <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'stretch', md: 'flex-end' }, flexDirection: { xs: 'column', md: 'row' } }}>
+                                    <Button variant="outlined" onClick={() => router.get(route('controls.main'))} disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>Cancel</Button>
+                                    <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>{processing ? 'Saving...' : 'Save Changes'}</Button>
+                                </Box>
                             </Grid>
                         </Grid>
                     </form>
@@ -108,4 +128,6 @@ export default function ControlEdit() {
             </Box>
         </DashboardLayout>
     );
-} 
+}
+
+

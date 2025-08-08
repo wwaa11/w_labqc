@@ -2,9 +2,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asset;
+use App\Models\AssetType;
 use App\Models\Control;
-use App\Models\Procedure;
-use App\Models\Record;
+use App\Models\ControlType;
+use App\Models\LimitValue;
 use App\Models\User;
 use Auth;
 use Illuminate\Http\Request;
@@ -12,194 +13,85 @@ use Illuminate\Support\Facades\Http;
 
 class WebController extends Controller
 {
-    public function index()
+    // Non-admin: View assets at the current user's location
+    public function UserAssets(Request $request)
     {
-        $assets = Asset::with(['procedures.control', 'procedures.last_record'])->where('location', auth()->user()->location)->get();
+        $userLocation = auth()->user()->location;
 
-        return inertia('index', compact('assets'));
+        $assets = Asset::query()
+            ->where('location', $userLocation)
+            ->where('is_deleted', false)
+            ->whereHas('assetType', function ($q) {
+                $q->notDeleted()->whereHas('controlTypes', function ($q2) {
+                    $q2->notDeleted()->whereHas('controls', function ($q3) {
+                        $q3->where('is_deleted', false)->active();
+                    });
+                });
+            })
+            ->with([
+                'assetType'                                   => function ($q) {$q->notDeleted();},
+                'assetType.controlTypes'                      => function ($q) {$q->notDeleted();},
+                'assetType.controlTypes.controls'             => function ($q) {$q->where('is_deleted', false)->active();},
+                'assetType.controlTypes.controls.limitValues' => function ($q) {$q->where('is_deleted', false);},
+            ])
+            ->get();
+
+        return inertia('users/dashboard', [
+            'assets' => $assets,
+        ]);
     }
 
-    public function RecordStore(Request $request)
+    // Create a record for a control type, validating against the active control's limits
+    public function RecordsStore(Request $request)
     {
         $validated = $request->validate([
-            'procedure_id' => 'required|integer|exists:procedures,id',
-            'value'        => 'required|string',
-            'result'       => 'required|in:PASS,FAILED',
+            'control_type_id' => 'required|exists:control_types,id',
+            'record_value'    => 'required|string|max:1000',
+            'memo'            => 'nullable|string|max:1000',
         ]);
-        $record               = new Record;
-        $record->procedure_id = $request->procedure_id;
-        $record->value        = $request->value;
-        $record->result       = $request->result;
-        $record->verified_by  = auth()->user()->user_id;
+
+        $controlType   = ControlType::findOrFail($validated['control_type_id']);
+        $activeControl = Control::where('control_type_id', $controlType->id)
+            ->where('is_deleted', false)
+            ->active()
+            ->with(['limitValues' => function ($q) {$q->where('is_deleted', false);}])
+            ->first();
+
+        if (! $activeControl) {
+            return back()->with('error', 'No active control found for this type.');
+        }
+
+        $value = $validated['record_value'];
+        if ($activeControl->limit_type === 'range') {
+            $lv  = $activeControl->limitValues->first();
+            $num = is_numeric($value) ? (float) $value : null;
+            if ($lv && ($num === null || ($lv->min_value !== null && $num < (float) $lv->min_value) || ($lv->max_value !== null && $num > (float) $lv->max_value))) {
+                return back()->with('error', 'Value is out of allowed range.');
+            }
+        } elseif ($activeControl->limit_type === 'option') {
+            $allowed = $activeControl->limitValues->pluck('option_value')->filter()->values()->all();
+            if (! in_array($value, $allowed, true)) {
+                return back()->with('error', 'Value is not within allowed options.');
+            }
+        } elseif ($activeControl->limit_type === 'text') {
+            if (trim($value) === '') {
+                return back()->with('error', 'Text value cannot be empty.');
+            }
+        }
+
+        $record                  = new \App\Models\Record();
+        $record->control_type_id = $controlType->id;
+        $record->record_value    = $value;
+        $record->verified_by     = auth()->user() ? (auth()->user()->user_id ?? auth()->user()->name ?? null) : null;
+        $record->approved_by     = null;
+        $record->memo            = $validated['memo'] ?? null;
+        $record->is_deleted      = false;
         $record->save();
 
-        return redirect()->route('index');
+        return back()->with('success', 'Record created successfully.');
     }
 
-    public function AssetsMain(Request $request)
-    {
-        $query = Asset::query();
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-        $assets = $query->get();
-        return inertia('assets/main', compact('assets'));
-    }
-
-    public function AssetsCreate()
-    {
-        $controls = Control::all();
-
-        return inertia('assets/create', compact('controls'));
-    }
-
-    public function AssetsStore(Request $request)
-    {
-        $asset                = new Asset;
-        $asset->type          = $request->type;
-        $asset->name          = $request->name;
-        $asset->frequency     = $request->frequency;
-        $asset->environment   = $request->environment;
-        $asset->brand         = $request->brand;
-        $asset->model         = $request->model;
-        $asset->serial_number = $request->serial_number;
-        $asset->location      = $request->location;
-        $asset->memo          = $request->memo;
-        $asset->save();
-
-        foreach ($request->controls as $control) {
-            $new_control             = new Procedure;
-            $new_control->asset_id   = $asset->id;
-            $new_control->control_id = $control;
-            $new_control->save();
-        }
-
-        return redirect()->route('assets.main');
-    }
-
-    public function AssetsEdit($id)
-    {
-        $asset            = Asset::findOrFail($id);
-        $controls         = Control::all();
-        $current_controls = $asset->procedures()->pluck('control_id')->toArray();
-        return inertia('assets/edit', [
-            'asset'            => $asset,
-            'controls'         => $controls,
-            'current_controls' => $current_controls,
-        ]);
-    }
-
-    public function AssetsUpdate(Request $request, $id)
-    {
-        $asset = Asset::findOrFail($id);
-
-        $validated = $request->validate([
-            'type'          => 'required|string|max:255',
-            'name'          => 'required|string|max:255',
-            'environment'   => 'required|string|max:255',
-            'frequency'     => 'required|string|max:255',
-            'brand'         => 'nullable|string|max:255',
-            'model'         => 'nullable|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
-            'location'      => 'required|string|max:255',
-            'memo'          => 'nullable|string',
-            'controls'      => 'array',
-        ]);
-
-        $asset->update($validated);
-
-        // Update procedures (controls)
-        $existingControlIds = $asset->procedures()->pluck('control_id')->toArray();
-        $newControlIds      = $request->controls ?? [];
-
-        // Delete procedures that are no longer present
-        $toDelete = array_diff($existingControlIds, $newControlIds);
-        if (! empty($toDelete)) {
-            $asset->procedures()->whereIn('control_id', $toDelete)->delete();
-        }
-
-        // Add new procedures
-        $toAdd = array_diff($newControlIds, $existingControlIds);
-        foreach ($toAdd as $controlId) {
-            $new_control             = new Procedure();
-            $new_control->asset_id   = $asset->id;
-            $new_control->control_id = $controlId;
-            $new_control->save();
-        }
-
-        return redirect()->route('assets.main')->with('success', 'Asset updated successfully.');
-    }
-
-    public function AssetsDestroy($id)
-    {
-        $asset = Asset::findOrFail($id);
-        $asset->delete();
-
-        return redirect()->route('assets.main');
-    }
-
-    public function ContolsMain(Request $request)
-    {
-        $query = Control::query();
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-        $controls = $query->get();
-        return inertia('controls/main', compact('controls'));
-    }
-
-    public function ContolsCreate()
-    {
-
-        return inertia('controls/create');
-    }
-
-    public function ContolsStore(Request $request)
-    {
-        $control          = new Control;
-        $control->name    = $request->name;
-        $control->limit   = $request->limit;
-        $control->brand   = $request->brand;
-        $control->lot     = $request->lot;
-        $control->expired = $request->expired;
-        $control->memo    = $request->memo;
-        $control->save();
-
-        return redirect()->route('controls.main');
-    }
-
-    public function ContolsDestroy($id)
-    {
-        $control = Control::findOrFail($id);
-        $control->delete();
-
-        return redirect()->route('controls.main');
-    }
-
-    public function ContolsEdit($id)
-    {
-        $control = Control::findOrFail($id);
-        return inertia('controls/edit', [
-            'control' => $control,
-        ]);
-    }
-
-    public function ContolsUpdate(Request $request, $id)
-    {
-        $control   = Control::findOrFail($id);
-        $validated = $request->validate([
-            'name'    => 'required|string|max:255',
-            'limit'   => 'nullable|string|max:255',
-            'brand'   => 'nullable|string|max:255',
-            'lot'     => 'nullable|string|max:255',
-            'expired' => 'nullable|string|max:255',
-            'memo'    => 'nullable|string',
-        ]);
-        $control->update($validated);
-        return redirect()->route('controls.main')->with('success', 'Control updated successfully.');
-    }
-
-    public function UsersMain(Request $request)
+    public function RolesMain(Request $request)
     {
         $query = User::query();
         if ($request->filled('search')) {
@@ -212,7 +104,7 @@ class WebController extends Controller
             $locations[] = $location->location;
         }
 
-        return inertia('users/main', [
+        return inertia('roles/main', [
             'users'     => $users,
             'locations' => $locations,
             'auth'      => [
@@ -221,7 +113,7 @@ class WebController extends Controller
         ]);
     }
 
-    public function CreateUserData($userid)
+    public function CreateRoleData($userid)
     {
         $response = Http::withHeaders(['token' => env('API_AUTH_KEY')])
             ->post('http://172.20.1.12/dbstaff/api/getuser', [
@@ -242,12 +134,11 @@ class WebController extends Controller
 
             return $userData;
         } else {
-
             return false;
         }
     }
 
-    public function UsersAdmin(Request $request)
+    public function RolesAdmin(Request $request)
     {
         $validated = $request->validate([
             'userid' => 'required|string|max:255',
@@ -260,10 +151,10 @@ class WebController extends Controller
         $userData->role = 'admin';
         $userData->save();
 
-        return redirect()->route('users.main')->with('success', 'User created successfully.');
+        return redirect()->route('roles.main')->with('success', 'User created successfully.');
     }
 
-    public function UsersStore(Request $request)
+    public function RolesStore(Request $request)
     {
         $validated = $request->validate([
             'userid'   => 'required|string|max:255',
@@ -281,10 +172,10 @@ class WebController extends Controller
         $userData->location = $request->location;
         $userData->save();
 
-        return redirect()->route('users.main')->with('success', 'User created successfully.');
+        return redirect()->route('roles.main')->with('success', 'User created successfully.');
     }
 
-    public function usersMassAssignLocation(Request $request)
+    public function RolesMassAssignLocation(Request $request)
     {
         $validated = $request->validate([
             'user_ids' => 'required|string',
@@ -292,44 +183,373 @@ class WebController extends Controller
         ]);
         $userIds = array_map('trim', explode(',', $validated['user_ids']));
         User::whereIn('user_id', $userIds)->update(['location' => $validated['location']]);
-        return redirect()->route('users.main')->with('success', 'Location assigned to selected users.');
+        return redirect()->route('roles.main')->with('success', 'Location assigned to selected users.');
     }
 
-    public function UsersDestroy($id)
+    public function RolesDestroy($id)
     {
         $user = User::findOrFail($id);
         $user->delete();
 
-        return redirect()->route('users.main');
+        return redirect()->route('roles.main');
     }
 
-    public function monitoring(Request $request)
+    // Asset Type Management Methods
+    public function AssetTypesMain(Request $request)
     {
-        $query = Asset::with(['procedures.control', 'procedures.last_record']);
-        if ($request->filled('ward')) {
-            $query->where('location', $request->ward);
+        $query = AssetType::query();
+        if ($request->filled('search')) {
+            $query->where('asset_type_name', 'like', '%' . $request->search . '%');
         }
-        $assets  = $query->get();
-        $grouped = $assets->groupBy('location')->map(function ($assets, $location) {
-            return [
-                'location' => $location,
-                'assets'   => $assets->values(),
-            ];
-        })->values();
-        return inertia('monitoring', [
-            'locations'    => $grouped,
-            'wards'        => Asset::distinct()->pluck('location'),
-            'selectedWard' => $request->ward ?? '',
-        ]);
+        $assetTypes = $query->notDeleted()->with('assets')->get();
+        return inertia('asset-types/main', compact('assetTypes'));
     }
 
-    public function assetView($id)
+    public function AssetTypesCreate()
     {
-        $asset = Asset::with(['procedures.control', 'procedures.records'])->findOrFail($id);
+        return inertia('asset-types/create');
+    }
 
-        return inertia('assets/view', [
-            'asset' => $asset,
+    public function AssetTypesStore(Request $request)
+    {
+        $validated = $request->validate([
+            'asset_type_name' => 'required|string|max:255',
+        ]);
+
+        $assetType                  = new AssetType();
+        $assetType->asset_type_name = $request->asset_type_name;
+        $assetType->save();
+
+        return redirect()->route('asset-types.main')->with('success', 'Asset type created successfully.');
+    }
+
+    public function AssetTypesEdit($id)
+    {
+        $assetType = AssetType::findOrFail($id);
+        return inertia('asset-types/edit', [
+            'assetType' => $assetType,
         ]);
     }
 
+    public function AssetTypesUpdate(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'asset_type_name' => 'required|string|max:255',
+        ]);
+
+        $assetType                  = AssetType::findOrFail($id);
+        $assetType->asset_type_name = $request->asset_type_name;
+        $assetType->save();
+
+        return redirect()->route('asset-types.main')->with('success', 'Asset type updated successfully.');
+    }
+
+    public function AssetTypesDestroy($id)
+    {
+        $assetType             = AssetType::findOrFail($id);
+        $assetType->is_deleted = true; // soft delete via boolean flag (see migration)
+        $assetType->save();
+
+        return redirect()->route('asset-types.main')->with('success', 'Asset type deleted (soft) successfully.');
+    }
+
+    // Control Type Management Methods
+    public function ControlTypesMain(Request $request)
+    {
+        $query = ControlType::query();
+        if ($request->filled('search')) {
+            $query->where('control_type_name', 'like', '%' . $request->search . '%');
+        }
+        $controlTypes = $query->notDeleted()->with(['assetType', 'controls'])->get();
+        return inertia('control-types/main', compact('controlTypes'));
+    }
+
+    public function ControlTypesCreate()
+    {
+        $assetTypes = AssetType::all();
+        return inertia('control-types/create', compact('assetTypes'));
+    }
+
+    public function ControlTypesStore(Request $request)
+    {
+        $validated = $request->validate([
+            'asset_type_id'     => 'required|exists:asset_types,id',
+            'control_type_name' => 'required|string|max:255',
+        ]);
+
+        $controlType                    = new ControlType();
+        $controlType->asset_type_id     = $request->asset_type_id;
+        $controlType->control_type_name = $request->control_type_name;
+        $controlType->save();
+
+        return redirect()->route('control-types.main')->with('success', 'Control type created successfully.');
+    }
+
+    public function ControlTypesEdit($id)
+    {
+        $controlType = ControlType::with('assetType')->findOrFail($id);
+        $assetTypes  = AssetType::all();
+        return inertia('control-types/edit', [
+            'controlType' => $controlType,
+            'assetTypes'  => $assetTypes,
+        ]);
+    }
+
+    public function ControlTypesUpdate(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'asset_type_id'     => 'required|exists:asset_types,id',
+            'control_type_name' => 'required|string|max:255',
+        ]);
+
+        $controlType                    = ControlType::findOrFail($id);
+        $controlType->asset_type_id     = $request->asset_type_id;
+        $controlType->control_type_name = $request->control_type_name;
+        $controlType->save();
+
+        return redirect()->route('control-types.main')->with('success', 'Control type updated successfully.');
+    }
+
+    public function ControlTypesDestroy($id)
+    {
+        $controlType             = ControlType::findOrFail($id);
+        $controlType->is_deleted = true; // soft delete via boolean flag (see migration)
+        $controlType->save();
+
+        return redirect()->route('control-types.main')->with('success', 'Control type deleted (soft) successfully.');
+    }
+    // Controls Management
+    public function ControlsMain(Request $request)
+    {
+        $controlTypes = ControlType::notDeleted()->get(['id', 'control_type_name']);
+        $controls     = Control::with(['controlType', 'limitValues' => function ($q) {$q->where('is_deleted', false);}])
+            ->where('controls.is_deleted', false)
+            ->join('control_types', 'control_types.id', '=', 'controls.control_type_id')
+            ->orderBy('control_types.control_type_name')
+            ->orderBy('controls.expired')
+            ->select('controls.*')
+            ->get();
+        return inertia('controls/main', compact('controls', 'controlTypes'));
+    }
+
+    public function ControlsCreate()
+    {
+        $controlTypes = ControlType::notDeleted()
+            ->with(['assetType:id,asset_type_name'])
+            ->get(['id', 'asset_type_id', 'control_type_name']);
+        return inertia('controls/create', compact('controlTypes'));
+    }
+
+    public function ControlsStore(Request $request)
+    {
+        $validated = $request->validate([
+            'control_name'    => 'required|string|max:255',
+            'control_type_id' => 'required|exists:control_types,id',
+            'brand'           => 'nullable|string|max:255',
+            'lot'             => 'nullable|string|max:255',
+            'expired'         => 'nullable|date',
+            'limit_type'      => 'required|in:range,option,text',
+            // Range
+            'min_value'       => 'nullable|required_if:limit_type,range|string',
+            'max_value'       => 'nullable|required_if:limit_type,range|string',
+            // Option
+            'options'         => 'nullable|required_if:limit_type,option|array',
+            'options.*'       => 'nullable|string',
+            // Text
+            'text_value'      => 'nullable|required_if:limit_type,text|string',
+            'memo'            => 'nullable|string|max:1000',
+        ]);
+
+        $control                  = new Control();
+        $control->control_name    = $validated['control_name'];
+        $control->control_type_id = $validated['control_type_id'];
+        $control->brand           = $validated['brand'] ?? null;
+        $control->lot             = $validated['lot'] ?? null;
+        $control->expired         = $validated['expired'] ?? null;
+        $control->limit_type      = $validated['limit_type'];
+        $control->memo            = $validated['memo'] ?? null;
+        $control->is_active       = false;
+        $control->is_deleted      = false;
+        $control->save();
+
+        // Persist limit values based on type
+        if ($control->limit_type === 'range') {
+            LimitValue::create([
+                'control_id' => $control->id,
+                'min_value'  => $validated['min_value'],
+                'max_value'  => $validated['max_value'],
+                'is_deleted' => false,
+            ]);
+        } elseif ($control->limit_type === 'option') {
+            foreach ($validated['options'] as $opt) {
+                if ($opt === null || $opt === '') {
+                    continue;
+                }
+
+                LimitValue::create([
+                    'control_id'   => $control->id,
+                    'option_value' => $opt,
+                    'is_deleted'   => false,
+                ]);
+            }
+        } elseif ($control->limit_type === 'text') {
+            LimitValue::create([
+                'control_id' => $control->id,
+                'text_value' => $validated['text_value'],
+                'is_deleted' => false,
+            ]);
+        }
+
+        return redirect()->route('controls.main')->with('success', 'Control created successfully.');
+    }
+
+    public function ControlsEdit($id)
+    {
+        $control = Control::with(['limitValues' => function ($q) {$q->where('is_deleted', false);}])->findOrFail($id);
+        $controlTypes = ControlType::notDeleted()->with(['assetType:id,asset_type_name'])->get(['id', 'asset_type_id', 'control_type_name']);
+        return inertia('controls/edit', compact('control', 'controlTypes'));
+    }
+
+    public function ControlsUpdate(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'control_name'    => 'required|string|max:255',
+            'control_type_id' => 'required|exists:control_types,id',
+            'brand'           => 'nullable|string|max:255',
+            'lot'             => 'nullable|string|max:255',
+            'expired'         => 'nullable|date',
+            'limit_type'      => 'required|in:range,option,text',
+            'min_value'       => 'nullable|required_if:limit_type,range|string',
+            'max_value'       => 'nullable|required_if:limit_type,range|string',
+            'options'         => 'nullable|required_if:limit_type,option|array',
+            'options.*'       => 'nullable|string',
+            'text_value'      => 'nullable|required_if:limit_type,text|string',
+            'memo'            => 'nullable|string|max:1000',
+        ]);
+
+        $control                  = Control::findOrFail($id);
+        $control->control_name    = $validated['control_name'];
+        $control->control_type_id = $validated['control_type_id'];
+        $control->brand           = $validated['brand'] ?? null;
+        $control->lot             = $validated['lot'] ?? null;
+        $control->expired         = $validated['expired'] ?? null;
+        $control->limit_type      = $validated['limit_type'];
+        $control->memo            = $validated['memo'] ?? null;
+        // Always deactivate on update
+        $control->is_active = false;
+        $control->save();
+
+        // soft-remove existing values
+        LimitValue::where('control_id', $control->id)->update(['is_deleted' => true]);
+
+        if ($control->limit_type === 'range') {
+            LimitValue::create([
+                'control_id' => $control->id,
+                'min_value'  => $validated['min_value'],
+                'max_value'  => $validated['max_value'],
+                'is_deleted' => false,
+            ]);
+        } elseif ($control->limit_type === 'option') {
+            foreach ($validated['options'] as $opt) {
+                if ($opt === null || $opt === '') {continue;}
+                LimitValue::create([
+                    'control_id'   => $control->id,
+                    'option_value' => $opt,
+                    'is_deleted'   => false,
+                ]);
+            }
+        } elseif ($control->limit_type === 'text') {
+            LimitValue::create([
+                'control_id' => $control->id,
+                'text_value' => $validated['text_value'],
+                'is_deleted' => false,
+            ]);
+        }
+
+        return redirect()->route('controls.main')->with('success', 'Control updated successfully.');
+    }
+
+    public function ControlsDestroy($id)
+    {
+        $control             = Control::findOrFail($id);
+        $control->is_deleted = true;
+        $control->save();
+        // Soft delete related limit values
+        LimitValue::where('control_id', $control->id)->update(['is_deleted' => true]);
+        return redirect()->route('controls.main')->with('success', 'Control deleted (soft) successfully.');
+    }
+
+    public function ControlsSetActive($id)
+    {
+        $control = Control::findOrFail($id);
+        Control::where('control_type_id', $control->control_type_id)->update(['is_active' => false]);
+        $control->is_active = true;
+        $control->save();
+        return redirect()->route('controls.main')->with('success', 'Control set as active.');
+    }
+
+    // Assets Management
+    public function AssetsMain(Request $request)
+    {
+        $assets = Asset::where('is_deleted', false)->with('assetType')->get();
+        return inertia('assets/main', compact('assets'));
+    }
+
+    public function AssetsCreate()
+    {
+        $assetTypes = AssetType::notDeleted()->get(['id', 'asset_type_name']);
+        return inertia('assets/create', compact('assetTypes'));
+    }
+
+    public function AssetsStore(Request $request)
+    {
+        $validated = $request->validate([
+            'asset_type_id' => 'required|exists:asset_types,id',
+            'name'          => 'required|string|max:255',
+            'frequency'     => 'nullable|string|max:255',
+            'environment'   => 'nullable|string|max:255',
+            'brand'         => 'nullable|string|max:255',
+            'model'         => 'nullable|string|max:255',
+            'serial_number' => 'nullable|string|max:255',
+            'location'      => 'nullable|string|max:255',
+            'memo'          => 'nullable|string|max:1000',
+        ]);
+
+        Asset::create($validated + ['is_deleted' => false]);
+        return redirect()->route('assets.main')->with('success', 'Asset created successfully.');
+    }
+
+    public function AssetsEdit($id)
+    {
+        $asset      = Asset::findOrFail($id);
+        $assetTypes = AssetType::notDeleted()->get(['id', 'asset_type_name']);
+        return inertia('assets/edit', compact('asset', 'assetTypes'));
+    }
+
+    public function AssetsUpdate(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'asset_type_id' => 'required|exists:asset_types,id',
+            'name'          => 'required|string|max:255',
+            'frequency'     => 'nullable|string|max:255',
+            'environment'   => 'nullable|string|max:255',
+            'brand'         => 'nullable|string|max:255',
+            'model'         => 'nullable|string|max:255',
+            'serial_number' => 'nullable|string|max:255',
+            'location'      => 'nullable|string|max:255',
+            'memo'          => 'nullable|string|max:1000',
+        ]);
+
+        $asset = Asset::findOrFail($id);
+        $asset->update($validated);
+        return redirect()->route('assets.main')->with('success', 'Asset updated successfully.');
+    }
+
+    public function AssetsDestroy($id)
+    {
+        $asset             = Asset::findOrFail($id);
+        $asset->is_deleted = true;
+        $asset->save();
+        return redirect()->route('assets.main')->with('success', 'Asset deleted (soft) successfully.');
+    }
 }

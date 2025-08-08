@@ -4,16 +4,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Record extends Model
+class LimitValue extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'control_type_id',
-        'record_value',
-        'verified_by',
-        'approved_by',
-        'memo',
+        'control_id',
+        'option_value',
+        'min_value',
+        'max_value',
+        'text_value',
         'is_deleted',
     ];
 
@@ -21,9 +21,8 @@ class Record extends Model
         'is_deleted' => 'boolean',
     ];
 
-    // Relationship: Record belongs to ControlType
-    public function controlType()
+    public function control()
     {
-        return $this->belongsTo(ControlType::class);
+        return $this->belongsTo(Control::class);
     }
 }

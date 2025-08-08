@@ -1,227 +1,78 @@
+import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { useForm, usePage, router } from '@inertiajs/react';
-import { Box, Button, TextField, Typography, Paper, Grid, Card, CardContent, IconButton, MenuItem } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { useState } from 'react';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
-export default function EditAsset() {
-    const { asset, controls, current_controls } = usePage().props as any;
-
-    const { data, setData, put, processing, errors } = useForm({
-        name: asset.name || '',
-        type: asset.type || '',
-        environment: asset.environment || '',
-        frequency: asset.frequency || '',
-        brand: asset.brand || '',
-        model: asset.model || '',
-        serial_number: asset.serial_number || '',
-        location: asset.location || '',
-        memo: asset.memo || '',
-        controls: current_controls || [],
+export default function AssetsEdit() {
+    const { asset, assetTypes, errors } = usePage().props as any;
+    const { data, setData, post, processing } = useForm({
+        asset_type_id: asset?.asset_type_id?.toString() || '',
+        name: asset?.name || '',
+        frequency: asset?.frequency || '',
+        environment: asset?.environment || '',
+        brand: asset?.brand || '',
+        model: asset?.model || '',
+        serial_number: asset?.serial_number || '',
+        location: asset?.location || '',
+        memo: asset?.memo || '',
     });
 
-    // For dynamic control fields
-    const [controlFields, setControlFields] = useState<number[]>(data.controls.length > 0 ? data.controls : []);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setData(e.target.name as keyof typeof data, e.target.value);
-    };
-
-    const handleControlChange = (idx: number, value: number) => {
-        const updated = [...controlFields];
-        updated[idx] = value;
-        setControlFields(updated);
-        setData('controls', updated);
-    };
-
-    const addControlField = () => {
-        setControlFields([...controlFields, 0]);
-        setData('controls', [...controlFields, 0]);
-    };
-
-    const removeControlField = (idx: number) => {
-        const updated = controlFields.filter((_, i) => i !== idx);
-        setControlFields(updated);
-        setData('controls', updated);
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        router.post(route('assets.update', asset.id), data);
-    };
+    const onSubmit = (e: React.FormEvent) => { e.preventDefault(); post(route('assets.update', asset.id)); };
 
     return (
         <DashboardLayout>
-            <Paper elevation={3} sx={{ p: 4, maxWidth: 700, mx: 'auto', mt: 4 }}>
-                <Typography variant="h5" mb={3} fontWeight="bold">
-                    Edit Asset
-                </Typography>
-                <Box component="form" onSubmit={handleSubmit} noValidate>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Name"
-                                name="name"
-                                value={data.name}
-                                onChange={handleChange}
-                                fullWidth
-                                required
-                                error={!!errors.name}
-                                helperText={errors.name}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                select
-                                label="Type"
-                                name="type"
-                                value={data.type}
-                                onChange={handleChange}
-                                fullWidth
-                                required
-                                error={!!errors.type}
-                                helperText={errors.type}
-                            >
-                                <MenuItem value="">Select Type</MenuItem>
-                                <MenuItem value="Glucose">Glucose</MenuItem>
-                                <MenuItem value="Protein">Protein</MenuItem>
-                            </TextField>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Environment"
-                                name="environment"
-                                value={data.environment}
-                                onChange={handleChange}
-                                fullWidth
-                                required
-                                error={!!errors.environment}
-                                helperText={errors.environment}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Frequency"
-                                name="frequency"
-                                value={data.frequency}
-                                onChange={handleChange}
-                                fullWidth
-                                required
-                                error={!!errors.frequency}
-                                helperText={errors.frequency}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Brand"
-                                name="brand"
-                                value={data.brand}
-                                onChange={handleChange}
-                                fullWidth
-                                error={!!errors.brand}
-                                helperText={errors.brand}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Model"
-                                name="model"
-                                value={data.model}
-                                onChange={handleChange}
-                                fullWidth
-                                error={!!errors.model}
-                                helperText={errors.model}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Serial Number"
-                                name="serial_number"
-                                value={data.serial_number}
-                                onChange={handleChange}
-                                fullWidth
-                                error={!!errors.serial_number}
-                                helperText={errors.serial_number}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Location"
-                                name="location"
-                                value={data.location}
-                                onChange={handleChange}
-                                fullWidth
-                                error={!!errors.location}
-                                helperText={errors.location}
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                label="Memo"
-                                name="memo"
-                                value={data.memo}
-                                onChange={handleChange}
-                                fullWidth
-                                multiline
-                                minRows={2}
-                                error={!!errors.memo}
-                                helperText={errors.memo}
-                            />
-                        </Grid>
-                        {/* Controls Section */}
-                        <Grid item xs={12}>
-                            <Card variant="outlined" sx={{ mt: 2 }}>
-                                <CardContent>
-                                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                        <Typography variant="subtitle1" fontWeight="bold">Controls</Typography>
-                                        <Button startIcon={<AddIcon />} onClick={addControlField} size="small" variant="contained">
-                                            Add Control
-                                        </Button>
-                                    </Box>
-                                    {controlFields.length === 0 && (
-                                        <Typography variant="body2" color="text.secondary">No controls added. Click 'Add Control' to add.</Typography>
-                                    )}
-                                    {controlFields.map((controlId, idx) => (
-                                        <Box key={idx} display="flex" alignItems="center" mb={1}>
-                                            <TextField
-                                                select
-                                                label={`Control #${idx + 1}`}
-                                                value={controlId === 0 ? '' : controlId}
-                                                onChange={e => handleControlChange(idx, Number(e.target.value))}
-                                                sx={{ minWidth: 400, width: 400 }}
-                                                size="small"
-                                                error={!!(errors.controls && errors.controls[idx])}
-                                                helperText={errors.controls && errors.controls[idx]}
-                                            >
-                                                <MenuItem value="" disabled>Select Control</MenuItem>
-                                                {controls && controls.map((control: any) => (
-                                                    <MenuItem key={control.id} value={control.id}>{control.name} : {control.limit}</MenuItem>
-                                                ))}
-                                            </TextField>
-                                            <IconButton aria-label="Remove" color="error" onClick={() => removeControlField(idx)}>
-                                                <RemoveCircleOutlineIcon />
-                                            </IconButton>
-                                        </Box>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                fullWidth
-                                disabled={processing}
-                                sx={{ mt: 2 }}
-                            >
-                                Update Asset
-                            </Button>
-                        </Grid>
-                    </Grid>
+            <Head title="Edit Asset" />
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Edit Asset</Typography>
+                    <Typography variant="body1" color="text.secondary">Update asset information</Typography>
                 </Box>
-            </Paper>
+                <Paper sx={{ p: { xs: 2, md: 3 } }}>
+                    <form onSubmit={onSubmit}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth error={!!errors?.asset_type_id}>
+                                    <InputLabel id="at-label">Asset Type</InputLabel>
+                                    <Select labelId="at-label" label="Asset Type" value={data.asset_type_id} onChange={(e) => setData('asset_type_id', e.target.value)} required>
+                                        {assetTypes.map((at: any) => (<MenuItem key={at.id} value={at.id}>{at.asset_type_name}</MenuItem>))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth label="Name" value={data.name} onChange={(e) => setData('name', e.target.value)} required error={!!errors?.name} helperText={errors?.name} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth label="Frequency" value={data.frequency} onChange={(e) => setData('frequency', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth label="Environment" value={data.environment} onChange={(e) => setData('environment', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Brand" value={data.brand} onChange={(e) => setData('brand', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Model" value={data.model} onChange={(e) => setData('model', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Serial Number" value={data.serial_number} onChange={(e) => setData('serial_number', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth label="Location" value={data.location} onChange={(e) => setData('location', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField fullWidth label="Memo" value={data.memo} onChange={(e) => setData('memo', e.target.value)} multiline minRows={3} />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'stretch', md: 'flex-end' }, flexDirection: { xs: 'column', md: 'row' } }}>
+                                    <Button variant="outlined" onClick={() => router.get(route('assets.main'))} disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>Cancel</Button>
+                                    <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>{processing ? 'Saving...' : 'Save Changes'}</Button>
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </form>
+                </Paper>
+            </Box>
         </DashboardLayout>
     );
-} 
+}
+
+

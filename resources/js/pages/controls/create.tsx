@@ -1,122 +1,133 @@
-import { useForm } from '@inertiajs/react';
+import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { Box, Button, TextField, Typography, Paper } from '@mui/material';
-import Grid from '@mui/material/Grid';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem, Alert, IconButton } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/RemoveCircleOutline';
 
 export default function ControlsCreate() {
-    const { data, setData, post, processing, errors } = useForm({
-        name: '',
-        limit: '',
+    const { controlTypes, errors } = usePage().props as any;
+    const { data, setData, post, processing } = useForm({
+        control_name: '',
+        control_type_id: '',
         brand: '',
         lot: '',
         expired: '',
+        limit_type: 'range' as 'range' | 'option' | 'text',
+        min_value: '',
+        max_value: '',
+        options: [''] as string[],
+        text_value: '',
         memo: '',
     });
 
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => {
-        setData(e.target.name as keyof typeof data, e.target.value);
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('controls.store'));
     };
 
+    const addOption = () => setData('options', [...data.options, '']);
+    const removeOption = (idx: number) => setData('options', data.options.filter((_, i) => i !== idx));
+    const updateOption = (idx: number, value: string) => setData('options', data.options.map((v, i) => (i === idx ? value : v)));
+
     return (
         <DashboardLayout>
-            <Typography variant="h5" mb={3} fontWeight="bold">
-                Create Control
-            </Typography>
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-                <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Name"
-                            name="name"
-                            value={data.name}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                            error={!!errors.name}
-                            helperText={errors.name}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Limit"
-                            name="limit"
-                            value={data.limit}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                            error={!!errors.limit}
-                            helperText={errors.limit}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Brand"
-                            name="brand"
-                            value={data.brand}
-                            onChange={handleChange}
-                            fullWidth
-                            error={!!errors.brand}
-                            helperText={errors.brand}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Lot"
-                            name="lot"
-                            value={data.lot}
-                            onChange={handleChange}
-                            fullWidth
-                            error={!!errors.lot}
-                            helperText={errors.lot}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Expired"
-                            name="expired"
-                            type="date"
-                            value={data.expired}
-                            onChange={handleChange}
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                            error={!!errors.expired}
-                            helperText={errors.expired}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            label="Memo"
-                            name="memo"
-                            value={data.memo}
-                            onChange={handleChange}
-                            fullWidth
-                            multiline
-                            minRows={2}
-                            error={!!errors.memo}
-                            helperText={errors.memo}
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            color="primary"
-                            disabled={processing}
-                            fullWidth
-                            sx={{ py: 1.5 }}
-                        >
-                            Create Control
-                        </Button>
-                    </Grid>
-                </Grid>
+            <Head title="Create Control" />
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Create Control</Typography>
+                    <Typography variant="body1" color="text.secondary">Add a new control and define its limit values</Typography>
+                </Box>
+
+                <Paper sx={{ p: { xs: 2, md: 3 } }}>
+                    <form onSubmit={onSubmit}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth label="Control Name" value={data.control_name} onChange={(e) => setData('control_name', e.target.value)} required error={!!errors?.control_name} helperText={errors?.control_name} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth error={!!errors?.control_type_id}>
+                                    <InputLabel id="ct-label">Control Type</InputLabel>
+                                    <Select labelId="ct-label" label="Control Type" value={data.control_type_id} onChange={(e) => setData('control_type_id', e.target.value)} required>
+                                        <MenuItem value=""><em>Select control type</em></MenuItem>
+                                        {controlTypes.map((ct: any) => (
+                                            <MenuItem key={ct.id} value={ct.id}>
+                                                {ct.asset_type?.asset_type_name ? `${ct.asset_type.asset_type_name} - ${ct.control_type_name}` : ct.control_type_name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Brand" value={data.brand} onChange={(e) => setData('brand', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth label="Lot" value={data.lot} onChange={(e) => setData('lot', e.target.value)} />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField fullWidth type="date" label="Expired" value={data.expired} onChange={(e) => setData('expired', e.target.value)} InputLabelProps={{ shrink: true }} />
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="lt-label">Limit Type</InputLabel>
+                                    <Select labelId="lt-label" label="Limit Type" value={data.limit_type} onChange={(e) => setData('limit_type', e.target.value as any)}>
+                                        <MenuItem value="range">Range</MenuItem>
+                                        <MenuItem value="option">Option</MenuItem>
+                                        <MenuItem value="text">Text</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {data.limit_type === 'range' && (
+                                <>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField fullWidth label="Min Value" value={data.min_value} onChange={(e) => setData('min_value', e.target.value)} required error={!!errors?.min_value} helperText={errors?.min_value} />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                        <TextField fullWidth label="Max Value" value={data.max_value} onChange={(e) => setData('max_value', e.target.value)} required error={!!errors?.max_value} helperText={errors?.max_value} />
+                                    </Grid>
+                                </>
+                            )}
+
+                            {data.limit_type === 'option' && (
+                                <Grid item xs={12}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        {data.options.map((opt, idx) => (
+                                            <Box key={idx} sx={{ display: 'flex', gap: 1 }}>
+                                                <TextField fullWidth label={`Option ${idx + 1}`} value={opt} onChange={(e) => updateOption(idx, e.target.value)} />
+                                                <IconButton aria-label="remove option" onClick={() => removeOption(idx)} disabled={data.options.length <= 1}>
+                                                    <RemoveIcon />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
+                                        <Button onClick={addOption} startIcon={<AddIcon />} variant="outlined">Add Option</Button>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            {data.limit_type === 'text' && (
+                                <Grid item xs={12} md={6}>
+                                    <TextField fullWidth label="Text Value" value={data.text_value} onChange={(e) => setData('text_value', e.target.value)} required error={!!errors?.text_value} helperText={errors?.text_value} />
+                                </Grid>
+                            )}
+
+                            <Grid item xs={12}>
+                                <TextField fullWidth label="Memo" value={data.memo} onChange={(e) => setData('memo', e.target.value)} multiline minRows={3} />
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'stretch', md: 'flex-end' }, flexDirection: { xs: 'column', md: 'row' } }}>
+                                    <Button variant="outlined" onClick={() => router.get(route('controls.main'))} disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>Cancel</Button>
+                                    <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>{processing ? 'Creating...' : 'Create Control'}</Button>
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </form>
+                </Paper>
             </Box>
         </DashboardLayout>
     );
 }
+
+

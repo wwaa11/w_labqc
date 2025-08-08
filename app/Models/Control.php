@@ -1,7 +1,6 @@
 <?php
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,21 +9,35 @@ class Control extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'limit', 'brand', 'lot', 'expired', 'memo',
+        'control_name',
+        'control_type_id',
+        'brand',
+        'lot',
+        'expired',
+        'limit_type',
+        'memo',
+        'is_active',
+        'is_deleted',
     ];
 
     protected $casts = [
-        'expired' => 'datetime',
+        'expired'    => 'datetime',
+        'is_active'  => 'boolean',
+        'is_deleted' => 'boolean',
     ];
 
-    public function getExpiredAttribute($value)
+    public function controlType()
     {
-        return $value ? Carbon::parse($value)->format('d/M/Y') : null;
+        return $this->belongsTo(ControlType::class);
     }
 
-    // Define the relationship: Procedure belongs to Asset
-    public function procedure()
+    public function limitValues()
     {
-        return $this->belongsTo(Procedure::class);
+        return $this->hasMany(LimitValue::class);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

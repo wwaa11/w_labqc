@@ -4,20 +4,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Asset extends Model
+class ControlType extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'asset_type_id',
-        'name',
-        'frequency',
-        'environment',
-        'brand',
-        'model',
-        'serial_number',
-        'location',
-        'memo',
+        'control_type_name',
         'is_deleted',
     ];
 
@@ -25,9 +18,24 @@ class Asset extends Model
         'is_deleted' => 'boolean',
     ];
 
-    // Relationship: Asset belongs to AssetType
     public function assetType()
     {
         return $this->belongsTo(AssetType::class);
+    }
+
+    public function controls()
+    {
+        return $this->hasMany(Control::class);
+    }
+
+    public function records()
+    {
+        return $this->hasMany(Record::class);
+    }
+
+    // Scope to exclude soft-deleted rows
+    public function scopeNotDeleted($query)
+    {
+        return $query->where('is_deleted', false);
     }
 }

@@ -1,5 +1,4 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, ChangeEvent } from 'react';
 
 // Material UI imports
@@ -9,10 +8,6 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
-import InputAdornment from '@mui/material/InputAdornment';
-import AccountCircle from '@mui/icons-material/AccountCircle';
-import LockIcon from '@mui/icons-material/Lock';
-
 import Logo from '@/components/Logo';
 
 type LoginForm = {
@@ -38,24 +33,22 @@ export default function Login({ status }: LoginProps) {
     };
 
     return (
-        <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" bgcolor="linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)" px={2}>
+        <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" px={2}>
             <Head title="Log in" />
-            <Paper elevation={6} sx={{ width: '100%', maxWidth: 400, p: 4, borderRadius: 3 }}>
-                <Box display="flex" flexDirection="column" alignItems="center" mb={2}>
-                    <Logo className="h-12 mb-2" />
-                    <Typography variant="h5" fontWeight={600} mb={0.5} color="primary.main">
-                        PR9 LAB Assets
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Log in to your account
+            <Paper sx={{ width: '100%', maxWidth: 420, p: 4, borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                <Box display="flex" flexDirection="column" alignItems="center" mb={1}>
+                    <Logo className="h-6" />
+                    <Typography variant="subtitle1" fontWeight={700} mt={1}>
+                        {(import.meta as any).env?.VITE_APP_NAME || 'Laravel'}
                     </Typography>
                 </Box>
+                <Typography variant="h5" fontWeight={700} mb={2}>Sign in</Typography>
                 <form onSubmit={submit} noValidate>
                     <Box mb={2}>
                         <TextField
                             id="userid"
                             name="userid"
-                            label="รหัสพนักงาน"
+                            label="User ID"
                             type="text"
                             required
                             autoFocus
@@ -63,18 +56,8 @@ export default function Login({ status }: LoginProps) {
                             autoComplete="username"
                             value={data.userid}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setData('userid', e.target.value)}
-                            placeholder="รหัสพนักงาน"
                             error={!!errors.userid}
                             helperText={errors.userid}
-                            slotProps={{
-                                input: {
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <AccountCircle color="action" />
-                                        </InputAdornment>
-                                    ),
-                                },
-                            }}
                         />
                     </Box>
                     <Box mb={2}>
@@ -88,18 +71,8 @@ export default function Login({ status }: LoginProps) {
                             autoComplete="current-password"
                             value={data.password}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setData('password', e.target.value)}
-                            placeholder="Password"
                             error={!!errors.password}
                             helperText={errors.password}
-                            slotProps={{
-                                input: {
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <LockIcon color="action" />
-                                        </InputAdornment>
-                                    ),
-                                },
-                            }}
                         />
                     </Box>
                     <Button
@@ -108,11 +81,10 @@ export default function Login({ status }: LoginProps) {
                         color="primary"
                         fullWidth
                         size="large"
-                        sx={{ py: 1.5, fontWeight: 600, fontSize: '1rem', mb: 1 }}
+                        sx={{ py: 1.25, fontWeight: 700, fontSize: '1rem' }}
                         disabled={processing}
-                        startIcon={processing ? <LoaderCircle className="animate-spin" /> : null}
                     >
-                        LOGIN
+                        {processing ? 'Signing in…' : 'Sign in'}
                     </Button>
                 </form>
                 {status && (

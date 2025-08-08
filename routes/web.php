@@ -5,38 +5,72 @@ use App\Http\Controllers\WebController;
 use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Support\Facades\Route;
 
-Route::get('login', [AuthenticatedSessionController::class, 'login'])->name('login');
-Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.attemps');
-Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/', [WebController::class, 'index'])->name('index');
-
-    Route::post('/record/store', [WebController::class, 'RecordStore'])->name('record.store');
-
+// Authentication
+Route::controller(AuthenticatedSessionController::class)->group(function () {
+    Route::get('login', 'login')->name('login');
+    Route::post('login', 'store')->name('login.attemps');
+    Route::post('logout', 'destroy')->name('logout');
 });
 
-Route::middleware(AdminMiddleware::class)->group(function () {
-    Route::get('/assets/main', [WebController::class, 'AssetsMain'])->name('assets.main');
-    Route::get('/assets/create', [WebController::class, 'AssetsCreate'])->name('assets.create');
-    Route::post('/assets/store', [WebController::class, 'AssetsStore'])->name('assets.store');
-    Route::get('/assets/edit/{id}', [WebController::class, 'AssetsEdit'])->name('assets.edit');
-    Route::post('/assets/{id}', [WebController::class, 'AssetsUpdate'])->name('assets.update');
-    Route::delete('/assets/{id}', [WebController::class, 'AssetsDestroy'])->name('assets.destroy');
+// Authenticated application routes
+Route::middleware(['auth'])->group(function () {
 
-    Route::get('/monitoring', [WebController::class, 'monitoring'])->name('monitoring');
-    Route::get('/assets/view/{id}', [WebController::class, 'assetView'])->name('assets.view');
+    Route::prefix('users')->as('users.')->controller(WebController::class)->group(function () {
+        Route::get('dashboard', 'UserAssets')->name('dashboard');
+        Route::post('records/store', 'RecordsStore')->name('records.store');
+    });
 
-    Route::get('/controls/main', [WebController::class, 'ContolsMain'])->name('controls.main');
-    Route::get('/controls/create', [WebController::class, 'ContolsCreate'])->name('controls.create');
-    Route::post('/controls/store', [WebController::class, 'ContolsStore'])->name('controls.store');
-    Route::get('/controls/edit/{id}', [WebController::class, 'ContolsEdit'])->name('controls.edit');
-    Route::post('/controls/update/{id}', [WebController::class, 'ContolsUpdate'])->name('controls.update');
-    Route::delete('/assets/{id}', [WebController::class, 'ContolsDestroy'])->name('controls.destroy');
+    // Admin-only management areas
+    Route::middleware(AdminMiddleware::class)->group(function () {
+        // Users Management Routes
+        Route::prefix('roles')->as('roles.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'RolesMain')->name('main');
+            Route::post('store', 'RolesStore')->name('store');
+            Route::post('admin', 'RolesAdmin')->name('admin');
+            Route::post('mass-assign-location', 'RolesMassAssignLocation')->name('massAssignLocation');
+            Route::delete('{id}', 'RolesDestroy')->name('destroy');
+        });
 
-    Route::get('/users/main', [WebController::class, 'UsersMain'])->name('users.main');
-    Route::post('/users/store', [WebController::class, 'UsersStore'])->name('users.store');
-    Route::post('/users/admin', [WebController::class, 'UsersAdmin'])->name('users.admin');
-    Route::post('/users/mass-assign-location', [WebController::class, 'usersMassAssignLocation'])->name('users.massAssignLocation');
-    Route::delete('/users/{id}', [WebController::class, 'UsersDestroy'])->name('users.destroy');
+        // Asset Type Management Routes
+        Route::prefix('asset-types')->as('asset-types.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'AssetTypesMain')->name('main');
+            Route::get('create', 'AssetTypesCreate')->name('create');
+            Route::post('store', 'AssetTypesStore')->name('store');
+            Route::get('edit/{id}', 'AssetTypesEdit')->name('edit');
+            Route::post('update/{id}', 'AssetTypesUpdate')->name('update');
+            Route::delete('{id}', 'AssetTypesDestroy')->name('destroy');
+        });
+
+        // Control Type Management Routes
+        Route::prefix('control-types')->as('control-types.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'ControlTypesMain')->name('main');
+            Route::get('create', 'ControlTypesCreate')->name('create');
+            Route::post('store', 'ControlTypesStore')->name('store');
+            Route::get('edit/{id}', 'ControlTypesEdit')->name('edit');
+            Route::post('update/{id}', 'ControlTypesUpdate')->name('update');
+            Route::delete('{id}', 'ControlTypesDestroy')->name('destroy');
+        });
+
+        // Controls Management Routes
+        Route::prefix('controls')->as('controls.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'ControlsMain')->name('main');
+            Route::get('create', 'ControlsCreate')->name('create');
+            Route::post('store', 'ControlsStore')->name('store');
+            Route::get('edit/{id}', 'ControlsEdit')->name('edit');
+            Route::post('update/{id}', 'ControlsUpdate')->name('update');
+            Route::delete('{id}', 'ControlsDestroy')->name('destroy');
+            Route::post('set-active/{id}', 'ControlsSetActive')->name('setActive');
+        });
+
+        // Assets Management Routes (Admin)
+        Route::prefix('assets')->as('assets.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'AssetsMain')->name('main');
+            Route::get('create', 'AssetsCreate')->name('create');
+            Route::post('store', 'AssetsStore')->name('store');
+            Route::get('edit/{id}', 'AssetsEdit')->name('edit');
+            Route::post('update/{id}', 'AssetsUpdate')->name('update');
+            Route::delete('{id}', 'AssetsDestroy')->name('destroy');
+        });
+    });
+
 });
