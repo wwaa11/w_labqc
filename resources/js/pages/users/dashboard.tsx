@@ -35,7 +35,7 @@ export default function UserDashboard() {
                 </Box>
 
                 {lastRecord && (
-                    <Box sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Box sx={{ mb: 1, p: 1, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                             <Chip
                                 label={`Last: ${lastRecord.record_value}`}
@@ -122,7 +122,7 @@ export default function UserDashboard() {
                                     onChange={(e) => setData('record_value', String(e.target.value))}
                                     renderValue={(selected) => {
                                         if (!selected) {
-                                            return <em style={{ color: '#666' }}>Select an option</em>;
+                                            return <em style={{ color: 'inherit', opacity: 0.6 }}>Select an option</em>;
                                         }
                                         return selected;
                                     }}
@@ -208,7 +208,9 @@ export default function UserDashboard() {
                                 mb: 2,
                                 flexWrap: 'wrap',
                                 p: 1,
-                                bgcolor: 'grey.50',
+                                bgcolor: 'background.paper',
+                                border: 1,
+                                borderColor: 'divider',
                                 borderRadius: 1
                             }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -227,7 +229,9 @@ export default function UserDashboard() {
                                         alignItems: 'center',
                                         mb: 0.5,
                                         p: 1,
-                                        bgcolor: 'grey.50',
+                                        bgcolor: 'background.paper',
+                                        border: 1,
+                                        borderColor: 'divider',
                                         borderRadius: 1
                                     }}>
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
