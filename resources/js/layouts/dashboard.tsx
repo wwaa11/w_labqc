@@ -12,6 +12,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import ScienceIcon from '@mui/icons-material/Science';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import CategoryIcon from '@mui/icons-material/Category';
 import TuneIcon from '@mui/icons-material/Tune';
@@ -124,6 +125,7 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     const { post } = useForm();
 
     // Responsive layout
+    const isSuperAdmin = auth?.user?.role === 'superadmin';
     const isAdmin = auth?.user?.role === 'admin';
     const appName = (import.meta as any).env?.VITE_APP_NAME || 'Laravel';
     const theme = useTheme();
@@ -145,18 +147,27 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     }, [auth.user.name]);
 
     // Navigation items array
-    const navItems = isAdmin
+    const navItems = isSuperAdmin
         ? [
             { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
+            { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
             { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
             { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
             { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
             { label: 'Asset Types', route: route('asset-types.main'), name: 'asset-types.main', icon: <CategoryIcon /> },
             { label: 'Control Types', route: route('control-types.main'), name: 'control-types.main', icon: <TuneIcon /> },
         ]
-        : [
-            { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
-        ];
+        : isAdmin
+            ? [
+                { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
+                { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
+                { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
+                { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
+                { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
+            ]
+            : [
+                { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
+            ];
 
     // Helper to check if a route is active by route name
     const isActive = (routeName: string) => {

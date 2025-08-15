@@ -68,6 +68,7 @@ return new class extends Migration
 
         Schema::create('records', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('asset_id');
             $table->unsignedBigInteger('control_type_id');
             $table->string('record_value');
             $table->string('record_result')->nullable();

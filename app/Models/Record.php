@@ -26,4 +26,10 @@ class Record extends Model
     {
         return $this->belongsTo(ControlType::class);
     }
+
+    public function asset()
+    {
+        return $this->belongsTo(Asset::class);
+    }
+
 }

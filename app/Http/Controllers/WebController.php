@@ -6,6 +6,7 @@ use App\Models\AssetType;
 use App\Models\Control;
 use App\Models\ControlType;
 use App\Models\LimitValue;
+use App\Models\Record;
 use App\Models\User;
 use Auth;
 use Illuminate\Http\Request;
@@ -18,89 +19,140 @@ class WebController extends Controller
     {
         $userLocation = auth()->user()->location;
 
-        $assets = Asset::query()
-            ->where('location', $userLocation)
-            ->where('is_deleted', false)
-            ->whereHas('assetType', function ($q) {
-                $q->notDeleted()->whereHas('controlTypes', function ($q2) {
-                    $q2->notDeleted()->whereHas('controls', function ($q3) {
-                        $q3->where('is_deleted', false)->active();
-                    });
-                });
-            })
-            ->with([
-                'assetType'                                   => function ($q) {$q->notDeleted();},
-                'assetType.controlTypes'                      => function ($q) {$q->notDeleted();},
-                'assetType.controlTypes.controls'             => function ($q) {$q->where('is_deleted', false)->active();},
-                'assetType.controlTypes.controls.limitValues' => function ($q) {$q->where('is_deleted', false);},
-                // Load latest non-deleted record per control type via relation
-                'assetType.controlTypes.latestRecord'         => function ($q) {$q->where('is_deleted', false);},
-            ])
-            ->get();
-
-        // Prepare UI-friendly fields for the frontend (move presentation logic to backend)
-        $assets = $assets->map(function ($asset) {
-            if (! $asset->relationLoaded('assetType') || ! $asset->assetType) {
-                return $asset;
-            }
-
-            $asset->assetType->setRelation('controlTypes', $asset->assetType->controlTypes->map(function ($ct) {
-                $ct->setRelation('controls', $ct->controls->map(function ($control) {
-                    // Normalize limit values for consistent frontend usage
-                    $limitValue = $control->limitValues;
-                    $normalized = $limitValue ? [
-                        'min_value'    => $limitValue->min_value,
-                        'max_value'    => $limitValue->max_value,
-                        'option_value' => $limitValue->option_value,
-                        'text_value'   => $limitValue->text_value,
-                    ] : null;
-                    $control->setAttribute('limit_values_normalized', $normalized);
-
-                    // Provide UI helpers based on limit type
-                    if ($control->limit_type === 'range') {
-                        $lv     = $control->limitValues;
-                        $minStr = $lv?->min_value ?? '';
-                        $maxStr = $lv?->max_value ?? '';
-                        $hasMin = $minStr !== '' && $minStr !== null;
-                        $hasMax = $maxStr !== '' && $maxStr !== null;
-                        $label  = ($hasMin || $hasMax)
-                        ? ($hasMin ? $minStr : '') . ($hasMin && $hasMax ? ' - ' : '') . ($hasMax ? $maxStr : '')
-                        : '';
-
-                        $control->setAttribute('ui_input_type', 'number');
-                        $control->setAttribute('ui_label', $label ?: 'Range');
-                        $control->setAttribute('ui_min', $hasMin ? (float) $minStr : null);
-                        $control->setAttribute('ui_max', $hasMax ? (float) $maxStr : null);
-                    } elseif ($control->limit_type === 'option') {
-                        $limitValue  = $control->limitValues;
-                        $optionValue = $limitValue?->option_value;
-                        $options     = $optionValue && $optionValue !== '' ? explode(',', $optionValue) : [];
-                        $control->setAttribute('ui_input_type', 'select');
-                        $control->setAttribute('ui_options', $options);
-                        $control->setAttribute('ui_label', 'Result');
-                    } else { // text
-                        $control->setAttribute('ui_input_type', 'text');
-                        $control->setAttribute('ui_label', 'Result');
-                    }
-
-                    return $control;
-                }));
-
-                return $ct;
-            }));
-
-            return $asset;
-        });
+        $assets     = $this->getUserAssets($userLocation);
+        $assetDatas = $this->buildAssetData($assets);
 
         return inertia('users/dashboard', [
-            'assets' => $assets,
+            'assets' => $assetDatas,
         ]);
+    }
+
+    /**
+     * Get assets for the user's location
+     */
+    private function getUserAssets(string $userLocation)
+    {
+        return Asset::query()
+            ->where('location', $userLocation)
+            ->where('is_deleted', false)
+            ->get();
+    }
+
+    /**
+     * Build asset data with controls and records
+     */
+    private function buildAssetData($assets)
+    {
+        return $assets->map(function ($asset) {
+            return [
+                'id'            => $asset->id,
+                'name'          => $asset->name,
+                'location'      => $asset->location,
+                'brand'         => $asset->brand,
+                'model'         => $asset->model,
+                'serial_number' => $asset->serial_number,
+                'frequency'     => $asset->frequency,
+                'environment'   => $asset->environment,
+                'controls'      => $this->getAssetControls($asset),
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get controls for a specific asset
+     */
+    private function getAssetControls($asset)
+    {
+        $controlTypes = ControlType::where('asset_type_id', $asset->asset_type_id)
+            ->where('is_deleted', false)
+            ->get();
+
+        return $controlTypes->map(function ($controlType) use ($asset) {
+            $activeControl = $this->getActiveControl($controlType->id);
+
+            if (! $activeControl) {
+                return null;
+            }
+
+            return [
+                'type'            => $controlType->control_type_name,
+                'control_type_id' => $controlType->id,
+                'control_name'    => $activeControl->control_name,
+                'brand'           => $activeControl->brand,
+                'lot'             => $activeControl->lot,
+                'expired'         => $activeControl->expired,
+                'limit_type'      => $activeControl->limit_type,
+                'limit_value'     => $this->getLimitValue($activeControl),
+                'limit_options'   => $this->getLimitOptions($activeControl),
+                'last_record'     => $this->getLastRecord($asset->id, $controlType->id),
+            ];
+        })->filter()->values()->toArray();
+    }
+
+    /**
+     * Get active control for a control type
+     */
+    private function getActiveControl(int $controlTypeId)
+    {
+        return Control::where('control_type_id', $controlTypeId)
+            ->where('is_deleted', false)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Get limit value based on control type
+     */
+    private function getLimitValue($control)
+    {
+        $limitValue = LimitValue::where('control_id', $control->id)->first();
+
+        if (! $limitValue) {
+            return null;
+        }
+
+        switch ($control->limit_type) {
+            case 'range':
+                return $limitValue->min_value . ' - ' . $limitValue->max_value;
+            case 'text':
+                return $limitValue->text_value;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Get limit options for option type controls
+     */
+    private function getLimitOptions($control)
+    {
+        if ($control->limit_type !== 'option') {
+            return [];
+        }
+
+        return LimitValue::where('control_id', $control->id)
+            ->pluck('option_value')
+            ->toArray();
+    }
+
+    /**
+     * Get the last approved record for an asset and control type
+     */
+    private function getLastRecord(int $assetId, int $controlTypeId)
+    {
+        return Record::where('asset_id', $assetId)
+            ->where('control_type_id', $controlTypeId)
+            ->where('is_deleted', false)
+            ->whereNotNull('approved_by')
+            ->latest()
+            ->first();
     }
 
     // Create a record for a control type, validating against the active control's limits
     public function RecordsStore(Request $request)
     {
         $validated = $request->validate([
+            'asset_id'        => 'required|exists:assets,id',
             'control_type_id' => 'required|exists:control_types,id',
             'record_value'    => 'required|string|max:1000',
             'memo'            => 'nullable|string|max:1000',
@@ -129,6 +181,7 @@ class WebController extends Controller
         }
 
         $record                  = new \App\Models\Record();
+        $record->asset_id        = $validated['asset_id'];
         $record->control_type_id = $controlType->id;
         $record->record_value    = $value;
         $record->record_result   = $result;
@@ -372,13 +425,29 @@ class WebController extends Controller
     public function ControlsMain(Request $request)
     {
         $controlTypes = ControlType::notDeleted()->get(['id', 'control_type_name']);
-        $controls     = Control::with(['controlType', 'limitValues' => function ($q) {$q->where('is_deleted', false);}])
+        $controls     = Control::join('control_types', 'control_types.id', '=', 'controls.control_type_id')
             ->where('controls.is_deleted', false)
-            ->join('control_types', 'control_types.id', '=', 'controls.control_type_id')
-            ->orderBy('control_types.control_type_name')
+            ->orderBy('control_type_id')
             ->orderBy('controls.expired')
-            ->select('controls.*')
+            ->select('controls.*', 'control_types.control_type_name', 'control_types.asset_type_id')
             ->get();
+        foreach ($controls as $control) {
+            $assetType                = AssetType::where('id', $control->asset_type_id)->first();
+            $control->asset_type_name = $assetType->asset_type_name;
+            $value                    = null;
+            if ($control->limit_type == 'range') {
+                $lv    = LimitValue::where('control_id', $control->id)->first();
+                $value = $lv->min_value . ' - ' . $lv->max_value;
+            } elseif ($control->limit_type == 'option') {
+                $lv    = LimitValue::where('control_id', $control->id)->get();
+                $value = $lv->pluck('option_value')->toArray();
+            } elseif ($control->limit_type == 'text') {
+                $lv    = LimitValue::where('control_id', $control->id)->first();
+                $value = $lv->text_value;
+            }
+            $control->limit_value = $value;
+        }
+
         return inertia('controls/main', compact('controls', 'controlTypes'));
     }
 
@@ -535,6 +604,14 @@ class WebController extends Controller
         return redirect()->route('controls.main')->with('success', 'Control set as active.');
     }
 
+    public function ControlsSetInactive($id)
+    {
+        $control            = Control::findOrFail($id);
+        $control->is_active = false;
+        $control->save();
+        return redirect()->route('controls.main')->with('success', 'Control set as inactive.');
+    }
+
     // Assets Management
     public function AssetsMain(Request $request)
     {
@@ -599,4 +676,92 @@ class WebController extends Controller
         $asset->save();
         return redirect()->route('assets.main')->with('success', 'Asset deleted (soft) successfully.');
     }
+
+    // Records Management
+    public function RecordsMain(Request $request)
+    {
+        $query = Record::with(['controlType.assetType']);
+
+        // Filter by status
+        if ($request->filled('status')) {
+            if ($request->status === 'unapproved') {
+                $query->where('is_deleted', false)->whereNull('approved_by');
+            } elseif ($request->status === 'approved') {
+                $query->where('is_deleted', false)->whereNotNull('approved_by');
+            } elseif ($request->status === 'deleted') {
+                $query->where('is_deleted', true);
+            } elseif ($request->status === 'all') {
+                // Show all records (both deleted and non-deleted)
+            }
+        } else {
+            // Default: show unapproved records
+            $query->where('is_deleted', false)->whereNull('approved_by');
+        }
+
+        // Filter by creation date
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $records = $query->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($record) {
+                // Add additional computed fields for display
+                if ($record->is_deleted) {
+                    $record->status       = 'Deleted';
+                    $record->status_color = 'error';
+                } else {
+                    $record->status       = $record->approved_by ? 'Approved' : ($record->verified_by ? 'Pending Approval' : 'Draft');
+                    $record->status_color = $record->approved_by ? 'success' : ($record->verified_by ? 'warning' : 'default');
+                }
+
+                // Add asset type information
+                $record->asset_type_name = $record->controlType->assetType->asset_type_name ?? 'Unknown';
+
+                // Get location from user
+                $record->location = auth()->user()->location ?? 'Unknown';
+
+                return $record;
+            });
+
+        return inertia('records/main', compact('records'));
+    }
+
+    public function RecordsApprove($id)
+    {
+        $record              = Record::findOrFail($id);
+        $record->approved_by = auth()->user()->name ?? auth()->user()->user_id ?? 'Admin';
+        $record->save();
+
+        return redirect()->route('records.main')->with('success', 'Record approved successfully.');
+    }
+
+    public function RecordsRemove(Request $request, $id)
+    {
+        $record              = Record::findOrFail($id);
+        $record->approved_by = auth()->user()->name ?? auth()->user()->user_id ?? 'Admin';
+        $record->is_deleted  = true;
+
+        // Save memo if provided
+        if ($request->has('memo') && $request->memo) {
+            $record->memo = $request->memo;
+        }
+
+        $record->save();
+
+        return redirect()->route('records.main')->with('success', 'Record removed successfully.');
+    }
+
+    public function RecordsRestore($id)
+    {
+        $record             = Record::findOrFail($id);
+        $record->is_deleted = false;
+        $record->save();
+
+        return redirect()->route('records.main')->with('success', 'Record restored successfully.');
+    }
+
 }

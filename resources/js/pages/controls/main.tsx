@@ -4,6 +4,7 @@ import { Box, Typography, Paper, Button, IconButton, Dialog, DialogTitle, Dialog
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/CheckCircleOutline';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
@@ -45,39 +46,48 @@ export default function ControlsMain() {
                             return ({
                                 id: c.id,
                                 name: c.control_name,
-                                type: (c.control_type && c.control_type.control_type_name) ? c.control_type.control_type_name : '-',
+                                type: c.control_type_name,
+                                assetType: c.asset_type_name,
                                 limitType: c.limit_type,
                                 expired: c.expired ? new Date(c.expired).toLocaleDateString() : '-',
                                 memo: c.memo ?? '-',
                                 isActive: !!c.is_active,
-                                values: (() => {
-                                    if (!limitValue) return '-';
-
-                                    if (c.limit_type === 'range') {
-                                        return `${limitValue.min_value ?? ''} - ${limitValue.max_value ?? ''}`;
-                                    } else if (c.limit_type === 'option') {
-                                        return limitValue.option_value ? limitValue.option_value.split(',').join(', ') : '-';
-                                    } else if (c.limit_type === 'text') {
-                                        return limitValue.text_value ?? '-';
-                                    }
-                                    return '-';
-                                })(),
+                                values: c.limit_value,
                             })
                         })}
                         columns={[
+                            { field: 'assetType', headerName: 'Asset Type', flex: 1, minWidth: 80 },
                             { field: 'name', headerName: 'Control', flex: 1, minWidth: 180 },
-                            { field: 'type', headerName: 'Control Type', flex: 1, minWidth: 120 },
+                            { field: 'type', headerName: 'Control Type', flex: 1, minWidth: 80 },
                             { field: 'limitType', headerName: 'Limit Type', flex: 0.7, minWidth: 120 },
-                            { field: 'expired', headerName: 'Expired', flex: 0.6, minWidth: 120 },
-                            { field: 'values', headerName: 'Values', flex: 1, minWidth: 200 },
+                            { field: 'expired', headerName: 'Expired', flex: 0.6, minWidth: 100 },
+                            { field: 'values', headerName: 'Values', flex: 1, minWidth: 100 },
                             { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 200 },
                             { field: 'isActive', headerName: 'Active', width: 120, renderCell: (params) => params.value ? <Chip color="success" label="Active" size="small" /> : <Chip label="Inactive" size="small" /> },
                             {
-                                field: 'actions', headerName: 'Actions', width: 200, sortable: false, filterable: false,
+                                field: 'actions', headerName: 'Actions', width: 280, sortable: false, filterable: false,
                                 renderCell: (params) => (
-                                    <Box>
-                                        {!params.row.isActive && (
-                                            <Button size="small" startIcon={<CheckIcon />} onClick={() => router.post(route('controls.setActive', params.id))}>Set Active</Button>
+                                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                        {params.row.isActive ? (
+                                            <Button
+                                                size="small"
+                                                startIcon={<CancelIcon />}
+                                                onClick={() => router.post(route('controls.setInactive', params.id))}
+                                                color="warning"
+                                                variant="outlined"
+                                            >
+                                                Set Inactive
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="small"
+                                                startIcon={<CheckIcon />}
+                                                onClick={() => router.post(route('controls.setActive', params.id))}
+                                                color="success"
+                                                variant="outlined"
+                                            >
+                                                Set Active
+                                            </Button>
                                         )}
                                         <IconButton size="small" onClick={() => router.get(route('controls.edit', params.id))}><EditIcon /></IconButton>
                                         <IconButton size="small" color="error" onClick={() => onDelete(Number(params.id))}><DeleteIcon /></IconButton>

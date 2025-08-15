@@ -6,12 +6,18 @@ import { Box, Typography, Paper, Stack, Chip, Divider, TextField, Button, FormCo
 export default function UserDashboard() {
     const { auth, assets } = usePage().props as any;
 
-    function ControlRecordForm({ control, controlTypeId, lastRecord }: { control: any; controlTypeId: number; lastRecord?: any }) {
-        const { data, setData, post, processing, reset } = useForm({ control_type_id: String(controlTypeId), record_value: '', memo: '' });
+
+
+    function ControlRecordForm({ control, controlTypeId, lastRecord, assetId }: { control: any; controlTypeId: number; lastRecord?: any; assetId: number }) {
+        const { data, setData, post, processing, reset } = useForm({
+            asset_id: String(assetId),
+            control_type_id: String(controlTypeId),
+            record_value: '',
+            memo: ''
+        });
 
         const handleSubmit = (e: React.FormEvent) => {
             e.preventDefault();
-            setData('control_type_id', String(controlTypeId));
             post(route('users.records.store'), {
                 onSuccess: () => {
                     reset('record_value', 'memo');
@@ -19,61 +25,86 @@ export default function UserDashboard() {
             });
         };
 
-        // Use backend-provided presentation fields; no client normalization/validation
-
         return (
-            <Paper key={control.id} variant="outlined" sx={{ p: 2, mt: 1 }}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Chip label={`Control: ${control.control_name}`} color="primary" />
-                    {control.brand && <Chip label={`Brand: ${control.brand}`} />}
-                    {control.lot && <Chip label={`Lot: ${control.lot}`} />}
-                    <Chip label={`Expired: ${control.expired ? new Date(control.expired).toLocaleDateString('en-GB') : '-'}`} />
-                </Box>
-                {/* Last record info */}
-                <Box sx={{ mt: 1, color: 'text.secondary', fontSize: 14 }}>
-                    {lastRecord ? (
-                        <>
-                            Last record: <b>{lastRecord.record_value}</b>
-                            {lastRecord.record_result ? (
-                                <> (<b>{lastRecord.record_result}</b>)</>
-                            ) : null}
-                            {lastRecord.created_at ? (
-                                <> • {new Date(lastRecord.created_at).toLocaleString()}</>
-                            ) : null}
-                        </>
-                    ) : (
-                        <>No previous record</>
-                    )}
+            <Paper key={control.id} variant="outlined" sx={{ p: 1.5, mt: 0.5 }}>
+                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
+                    <Chip label={`Control: ${control.control_name}`} color="primary" size="small" />
+                    {control.brand && <Chip label={`Brand: ${control.brand}`} size="small" />}
+                    {control.lot && <Chip label={`Lot: ${control.lot}`} size="small" />}
+                    <Chip label={`Expired: ${control.expired ? new Date(control.expired).toLocaleDateString('en-GB') : '-'}`} size="small" />
                 </Box>
 
-                <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, alignItems: 'stretch', flexWrap: 'wrap', mt: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+                {lastRecord && (
+                    <Box sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Chip
+                                label={`Last: ${lastRecord.record_value}`}
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                            />
+                            {lastRecord.record_result && (
+                                <Chip
+                                    label={lastRecord.record_result}
+                                    color={lastRecord.record_result === 'PASS' ? 'success' : 'error'}
+                                    size="small"
+                                />
+                            )}
+                            <Typography variant="caption" color="text.secondary">
+                                {new Date(lastRecord.created_at).toLocaleDateString('en-GB')}
+                            </Typography>
+                            {lastRecord.verified_by && (
+                                <Typography variant="caption" color="text.secondary">
+                                    by {lastRecord.verified_by}
+                                </Typography>
+                            )}
+                        </Box>
+                        {lastRecord.memo && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mt: 0.5 }}>
+                                {lastRecord.memo}
+                            </Typography>
+                        )}
+                    </Box>
+                )}
+
+                <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, alignItems: 'stretch', flexWrap: 'wrap', flexDirection: { xs: 'column', md: 'row' } }}>
                     <Box sx={{ minWidth: { xs: '100%', md: 240 }, flex: 1 }}>
                         {control.limit_type === 'range' ? (
                             <Box>
                                 <TextField
                                     size="small"
                                     fullWidth
-                                    label={control.ui_label || 'Range'}
                                     type="number"
+                                    placeholder={control.limit_value || "Enter value"}
                                     value={data.record_value}
                                     onChange={(e) => setData('record_value', e.target.value)}
                                     InputProps={{
-                                        endAdornment: data.record_value && control.ui_min !== null && control.ui_max !== null ? (
+                                        endAdornment: data.record_value && control.limit_value ? (
                                             <InputAdornment position="end">
                                                 <Chip
                                                     size="small"
                                                     label={(() => {
                                                         const value = parseFloat(data.record_value);
-                                                        const min = control.ui_min;
-                                                        const max = control.ui_max;
-                                                        if (isNaN(value)) return 'INVALID';
+                                                        const range = control.limit_value;
+                                                        if (!range || isNaN(value)) return 'INVALID';
+
+                                                        const [minStr, maxStr] = range.split(' - ');
+                                                        const min = parseFloat(minStr);
+                                                        const max = parseFloat(maxStr);
+
+                                                        if (isNaN(min) || isNaN(max)) return 'INVALID';
                                                         return value >= min && value <= max ? 'PASS' : 'FAIL';
                                                     })()}
                                                     color={(() => {
                                                         const value = parseFloat(data.record_value);
-                                                        const min = control.ui_min;
-                                                        const max = control.ui_max;
-                                                        if (isNaN(value)) return 'default';
+                                                        const range = control.limit_value;
+                                                        if (!range || isNaN(value)) return 'default';
+
+                                                        const [minStr, maxStr] = range.split(' - ');
+                                                        const min = parseFloat(minStr);
+                                                        const max = parseFloat(maxStr);
+
+                                                        if (isNaN(min) || isNaN(max)) return 'default';
                                                         return value >= min && value <= max ? 'success' : 'error';
                                                     })()}
                                                     sx={{ minWidth: 60, fontWeight: 'bold' }}
@@ -82,44 +113,37 @@ export default function UserDashboard() {
                                         ) : null
                                     }}
                                 />
-                                {data.record_value && control.ui_min !== null && control.ui_max !== null && (
-                                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Range: {control.ui_min} - {control.ui_max}
-                                        </Typography>
-                                    </Box>
-                                )}
                             </Box>
                         ) : control.limit_type === 'option' ? (
                             <FormControl fullWidth size="small">
-                                <InputLabel id={`opt-label-${control.id}`}>{control.ui_label || 'Result'}</InputLabel>
                                 <Select
-                                    labelId={`opt-label-${control.id}`}
-                                    label={control.ui_label || 'Result'}
+                                    displayEmpty
                                     value={data.record_value || ''}
                                     onChange={(e) => setData('record_value', String(e.target.value))}
+                                    renderValue={(selected) => {
+                                        if (!selected) {
+                                            return <em style={{ color: '#666' }}>Select an option</em>;
+                                        }
+                                        return selected;
+                                    }}
                                 >
-                                    <MenuItem value=""><em>Select an option</em></MenuItem>
-                                    {(control.ui_options || []).map((opt: any) => {
-                                        const s = String(opt);
-                                        return (
-                                            <MenuItem key={s} value={s}>{s}</MenuItem>
-                                        );
-                                    })}
+                                    {(control.limit_options || []).map((option: string, index: number) => (
+                                        <MenuItem key={index} value={option}>{option}</MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
                         ) : (
                             <TextField
                                 size="small"
                                 fullWidth
-                                label={control.ui_label || 'Result'}
+                                placeholder={control.limit_value || "Enter result"}
                                 value={data.record_value}
                                 onChange={(e) => setData('record_value', e.target.value)}
                             />
                         )}
                     </Box>
-                    <TextField size="small" label="Memo (optional)" value={data.memo} onChange={(e) => setData('memo', e.target.value)} sx={{ minWidth: { xs: '100%', md: 240 }, flex: 1 }} />
-                    <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>Submit</Button>
+                    <TextField size="small" placeholder="Memo (optional)" value={data.memo} onChange={(e) => setData('memo', e.target.value)} sx={{ minWidth: { xs: '100%', md: 200 }, flex: 1 }} />
+                    <Button type="submit" variant="contained" disabled={processing} size="small" sx={{ width: { xs: '100%', md: 'auto' } }}>Submit</Button>
                 </Box>
             </Paper>
         );
@@ -128,36 +152,94 @@ export default function UserDashboard() {
     return (
         <DashboardLayout>
             <Head title="My Assets" />
-            <Box sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Box>
-                        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>My Assets</Typography>
-                        <Typography variant="body1" color="text.secondary">Location: {auth.user.location || '-'}</Typography>
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>My Assets</Typography>
+                        <Typography variant="body2" color="text.secondary">Location: {auth.user.location || '-'}</Typography>
                     </Box>
                 </Box>
                 <Stack spacing={2}>
-                    {(assets || []).map((a: any) => (
-                        <Paper key={a.id} sx={{ p: 2 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }}>{a.name}</Typography>
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1, flexWrap: 'wrap' }}>
-                                {a.frequency && <Chip label={`Frequency: ${a.frequency}`} />}
-                                {a.environment && <Chip label={`Environment: ${a.environment}`} />}
-                                {a.brand && <Chip label={`Brand: ${a.brand}`} />}
-                                {a.model && <Chip label={`Model: ${a.model}`} />}
-                                {a.serial_number && <Chip label={`Serial: ${a.serial_number}`} />}
-                                {a.memo && <Chip label={`Memo: ${a.memo}`} />}
+                    {(assets || []).map((a: any, assetIndex: number) => (
+                        <Paper
+                            key={assetIndex}
+                            sx={{
+                                p: 2,
+                                border: '2px solid',
+                                borderColor: `primary.${(assetIndex % 3) === 0 ? 'main' : (assetIndex % 3) === 1 ? 'light' : 'dark'}`,
+                                borderRadius: 2,
+                                boxShadow: 3,
+                                position: 'relative',
+                                '&:hover': {
+                                    boxShadow: 6,
+                                    transform: 'translateY(-2px)',
+                                    transition: 'all 0.2s ease-in-out'
+                                }
+                            }}
+                        >
+                            {/* Asset Header with Background */}
+                            <Box sx={{
+                                bgcolor: `primary.${(assetIndex % 3) === 0 ? 'main' : (assetIndex % 3) === 1 ? 'light' : 'dark'}`,
+                                color: 'white',
+                                p: 1.5,
+                                mb: 2,
+                                borderRadius: 1,
+                                mx: -2,
+                                mt: -2
+                            }}>
+                                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                    {a.name}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    {a.frequency && <Chip label={`Frequency: ${a.frequency}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />}
+                                    {a.environment && <Chip label={`Environment: ${a.environment}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />}
+                                    {a.brand && <Chip label={`Brand: ${a.brand}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />}
+                                    {a.model && <Chip label={`Model: ${a.model}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />}
+                                    {a.serial_number && <Chip label={`Serial: ${a.serial_number}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />}
+                                </Box>
                             </Box>
-                            <Divider sx={{ my: 2 }} />
 
-                            {(a.asset_type?.control_types || []).map((ct: any) => (
-                                <Box key={ct.id} sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{ct.control_type_name}</Typography>
-                                    {(ct.controls || []).map((c: any) => {
-                                        const last = ct.latest_record || undefined;
-                                        return (
-                                            <ControlRecordForm key={c.id} control={c} controlTypeId={ct.id} lastRecord={last} />
-                                        );
-                                    })}
+                            {/* Asset Details */}
+                            <Box sx={{
+                                display: 'flex',
+                                gap: 1,
+                                alignItems: 'center',
+                                mb: 2,
+                                flexWrap: 'wrap',
+                                p: 1,
+                                bgcolor: 'grey.50',
+                                borderRadius: 1
+                            }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                    Asset Details:
+                                </Typography>
+                                {a.location && <Chip label={`Location: ${a.location}`} size="small" variant="outlined" />}
+                                {a.frequency && <Chip label={`Frequency: ${a.frequency}`} size="small" variant="outlined" />}
+                                {a.environment && <Chip label={`Environment: ${a.environment}`} size="small" variant="outlined" />}
+                            </Box>
+
+                            {(a.controls || []).map((control: any, controlIndex: number) => (
+                                <Box key={controlIndex} sx={{ mb: 1.5 }}>
+                                    <Box sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        mb: 0.5,
+                                        p: 1,
+                                        bgcolor: 'grey.50',
+                                        borderRadius: 1
+                                    }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                                            {control.type}
+                                        </Typography>
+                                    </Box>
+                                    <ControlRecordForm
+                                        control={control}
+                                        controlTypeId={control.control_type_id}
+                                        lastRecord={control.last_record}
+                                        assetId={a.id}
+                                    />
                                 </Box>
                             ))}
                         </Paper>

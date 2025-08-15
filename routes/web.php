@@ -2,7 +2,8 @@
 
 use App\Http\Controllers\AuthenticatedSessionController;
 use App\Http\Controllers\WebController;
-use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\AdminOnlyMiddleware;
+use App\Http\Middleware\SuperAdminMiddleware;
 use Illuminate\Support\Facades\Route;
 
 // Authentication
@@ -24,18 +25,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('records/store', 'RecordsStore')->name('records.store');
     });
 
-    // Admin-only management areas
-    Route::middleware(AdminMiddleware::class)->group(function () {
-        // Users Management Routes
-        Route::prefix('roles')->as('roles.')->controller(WebController::class)->group(function () {
-            Route::get('main', 'RolesMain')->name('main');
-            Route::post('store', 'RolesStore')->name('store');
-            Route::post('admin', 'RolesAdmin')->name('admin');
-            Route::post('mass-assign-location', 'RolesMassAssignLocation')->name('massAssignLocation');
-            Route::delete('{id}', 'RolesDestroy')->name('destroy');
-        });
-
-        // Asset Type Management Routes
+    // SuperAdmin-only management areas (Asset Types & Control Types)
+    Route::middleware(SuperAdminMiddleware::class)->group(function () {
+        // Asset Type Management Routes (SuperAdmin only)
         Route::prefix('asset-types')->as('asset-types.')->controller(WebController::class)->group(function () {
             Route::get('main', 'AssetTypesMain')->name('main');
             Route::get('create', 'AssetTypesCreate')->name('create');
@@ -45,7 +37,7 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('{id}', 'AssetTypesDestroy')->name('destroy');
         });
 
-        // Control Type Management Routes
+        // Control Type Management Routes (SuperAdmin only)
         Route::prefix('control-types')->as('control-types.')->controller(WebController::class)->group(function () {
             Route::get('main', 'ControlTypesMain')->name('main');
             Route::get('create', 'ControlTypesCreate')->name('create');
@@ -54,8 +46,20 @@ Route::middleware(['auth'])->group(function () {
             Route::post('update/{id}', 'ControlTypesUpdate')->name('update');
             Route::delete('{id}', 'ControlTypesDestroy')->name('destroy');
         });
+    });
 
-        // Controls Management Routes
+    // Admin and SuperAdmin management areas
+    Route::middleware(AdminOnlyMiddleware::class)->group(function () {
+        // Users Management Routes (Admin & SuperAdmin)
+        Route::prefix('roles')->as('roles.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'RolesMain')->name('main');
+            Route::post('store', 'RolesStore')->name('store');
+            Route::post('admin', 'RolesAdmin')->name('admin');
+            Route::post('mass-assign-location', 'RolesMassAssignLocation')->name('massAssignLocation');
+            Route::delete('{id}', 'RolesDestroy')->name('destroy');
+        });
+
+        // Controls Management Routes (Admin & SuperAdmin)
         Route::prefix('controls')->as('controls.')->controller(WebController::class)->group(function () {
             Route::get('main', 'ControlsMain')->name('main');
             Route::get('create', 'ControlsCreate')->name('create');
@@ -64,9 +68,10 @@ Route::middleware(['auth'])->group(function () {
             Route::post('update/{id}', 'ControlsUpdate')->name('update');
             Route::delete('{id}', 'ControlsDestroy')->name('destroy');
             Route::post('set-active/{id}', 'ControlsSetActive')->name('setActive');
+            Route::post('set-inactive/{id}', 'ControlsSetInactive')->name('setInactive');
         });
 
-        // Assets Management Routes (Admin)
+        // Assets Management Routes (Admin & SuperAdmin)
         Route::prefix('assets')->as('assets.')->controller(WebController::class)->group(function () {
             Route::get('main', 'AssetsMain')->name('main');
             Route::get('create', 'AssetsCreate')->name('create');
@@ -75,6 +80,15 @@ Route::middleware(['auth'])->group(function () {
             Route::post('update/{id}', 'AssetsUpdate')->name('update');
             Route::delete('{id}', 'AssetsDestroy')->name('destroy');
         });
+
+        // Records Management Routes (Admin & SuperAdmin)
+        Route::prefix('records')->as('records.')->controller(WebController::class)->group(function () {
+            Route::get('main', 'RecordsMain')->name('main');
+            Route::post('approve/{id}', 'RecordsApprove')->name('approve');
+            Route::delete('remove/{id}', 'RecordsRemove')->name('remove');
+            Route::post('restore/{id}', 'RecordsRestore')->name('restore');
+        });
+
     });
 
 });
