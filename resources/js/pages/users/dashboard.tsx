@@ -49,14 +49,47 @@ export default function UserDashboard() {
                 <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, alignItems: 'stretch', flexWrap: 'wrap', mt: 2, flexDirection: { xs: 'column', md: 'row' } }}>
                     <Box sx={{ minWidth: { xs: '100%', md: 240 }, flex: 1 }}>
                         {control.limit_type === 'range' ? (
-                            <TextField
-                                size="small"
-                                fullWidth
-                                label={control.ui_label || 'Range'}
-                                type="number"
-                                value={data.record_value}
-                                onChange={(e) => setData('record_value', e.target.value)}
-                            />
+                            <Box>
+                                <TextField
+                                    size="small"
+                                    fullWidth
+                                    label={control.ui_label || 'Range'}
+                                    type="number"
+                                    value={data.record_value}
+                                    onChange={(e) => setData('record_value', e.target.value)}
+                                    InputProps={{
+                                        endAdornment: data.record_value && control.ui_min !== null && control.ui_max !== null ? (
+                                            <InputAdornment position="end">
+                                                <Chip
+                                                    size="small"
+                                                    label={(() => {
+                                                        const value = parseFloat(data.record_value);
+                                                        const min = control.ui_min;
+                                                        const max = control.ui_max;
+                                                        if (isNaN(value)) return 'INVALID';
+                                                        return value >= min && value <= max ? 'PASS' : 'FAIL';
+                                                    })()}
+                                                    color={(() => {
+                                                        const value = parseFloat(data.record_value);
+                                                        const min = control.ui_min;
+                                                        const max = control.ui_max;
+                                                        if (isNaN(value)) return 'default';
+                                                        return value >= min && value <= max ? 'success' : 'error';
+                                                    })()}
+                                                    sx={{ minWidth: 60, fontWeight: 'bold' }}
+                                                />
+                                            </InputAdornment>
+                                        ) : null
+                                    }}
+                                />
+                                {data.record_value && control.ui_min !== null && control.ui_max !== null && (
+                                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Range: {control.ui_min} - {control.ui_max}
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
                         ) : control.limit_type === 'option' ? (
                             <FormControl fullWidth size="small">
                                 <InputLabel id={`opt-label-${control.id}`}>{control.ui_label || 'Result'}</InputLabel>

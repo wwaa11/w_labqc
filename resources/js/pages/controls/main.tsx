@@ -40,9 +40,8 @@ export default function ControlsMain() {
                     <DataGrid
                         autoHeight
                         rows={(controls || []).map((c: any) => {
-                            const normalizedLimitValues: any[] = Array.isArray(c.limit_values)
-                                ? c.limit_values
-                                : (c.limit_values ? Object.values(c.limit_values) : []);
+                            // Handle single limitValue object instead of array
+                            const limitValue = c.limitValues;
                             return ({
                                 id: c.id,
                                 name: c.control_name,
@@ -52,14 +51,14 @@ export default function ControlsMain() {
                                 memo: c.memo ?? '-',
                                 isActive: !!c.is_active,
                                 values: (() => {
+                                    if (!limitValue) return '-';
+
                                     if (c.limit_type === 'range') {
-                                        const v = normalizedLimitValues?.[0];
-                                        return v ? `${v.min_value ?? ''} - ${v.max_value ?? ''}` : '-';
+                                        return `${limitValue.min_value ?? ''} - ${limitValue.max_value ?? ''}`;
                                     } else if (c.limit_type === 'option') {
-                                        return normalizedLimitValues.map((lv: any) => lv.option_value).filter(Boolean).join(', ');
+                                        return limitValue.option_value ? limitValue.option_value.split(',').join(', ') : '-';
                                     } else if (c.limit_type === 'text') {
-                                        const v = normalizedLimitValues?.[0];
-                                        return v?.text_value ?? '-';
+                                        return limitValue.text_value ?? '-';
                                     }
                                     return '-';
                                 })(),

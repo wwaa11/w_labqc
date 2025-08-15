@@ -46,37 +46,35 @@ class WebController extends Controller
 
             $asset->assetType->setRelation('controlTypes', $asset->assetType->controlTypes->map(function ($ct) {
                 $ct->setRelation('controls', $ct->controls->map(function ($control) {
-                    // Normalize limit values array for consistent frontend usage
-                    $normalized = $control->limitValues->map(function ($lv) {
-                        return [
-                            'min_value'    => $lv->min_value,
-                            'max_value'    => $lv->max_value,
-                            'option_value' => $lv->option_value,
-                            'text_value'   => $lv->text_value,
-                        ];
-                    })->values();
+                    // Normalize limit values for consistent frontend usage
+                    $limitValue = $control->limitValues;
+                    $normalized = $limitValue ? [
+                        'min_value'    => $limitValue->min_value,
+                        'max_value'    => $limitValue->max_value,
+                        'option_value' => $limitValue->option_value,
+                        'text_value'   => $limitValue->text_value,
+                    ] : null;
                     $control->setAttribute('limit_values_normalized', $normalized);
 
                     // Provide UI helpers based on limit type
                     if ($control->limit_type === 'range') {
-                        $lv     = $control->limitValues->first();
+                        $lv     = $control->limitValues;
                         $minStr = $lv?->min_value ?? '';
                         $maxStr = $lv?->max_value ?? '';
                         $hasMin = $minStr !== '' && $minStr !== null;
                         $hasMax = $maxStr !== '' && $maxStr !== null;
                         $label  = ($hasMin || $hasMax)
-                            ? ($hasMin ? $minStr : '') . ($hasMin && $hasMax ? ' - ' : '') . ($hasMax ? $maxStr : '')
-                            : '';
+                        ? ($hasMin ? $minStr : '') . ($hasMin && $hasMax ? ' - ' : '') . ($hasMax ? $maxStr : '')
+                        : '';
 
                         $control->setAttribute('ui_input_type', 'number');
                         $control->setAttribute('ui_label', $label ?: 'Range');
                         $control->setAttribute('ui_min', $hasMin ? (float) $minStr : null);
                         $control->setAttribute('ui_max', $hasMax ? (float) $maxStr : null);
                     } elseif ($control->limit_type === 'option') {
-                        $options = $control->limitValues
-                            ->pluck('option_value')
-                            ->filter(function ($v) {return $v !== null && $v !== '';})
-                            ->values();
+                        $limitValue  = $control->limitValues;
+                        $optionValue = $limitValue?->option_value;
+                        $options     = $optionValue && $optionValue !== '' ? explode(',', $optionValue) : [];
                         $control->setAttribute('ui_input_type', 'select');
                         $control->setAttribute('ui_options', $options);
                         $control->setAttribute('ui_label', 'Result');
@@ -120,7 +118,7 @@ class WebController extends Controller
 
         $result = null;
         if ($control->limit_type == 'range') {
-            $lv       = $control->limitValues->first();
+            $lv       = $control->limitValues;
             $minValue = $lv?->min_value;
             $maxValue = $lv?->max_value;
             if ($minValue !== null && $maxValue !== null && $value >= $minValue && $value <= $maxValue) {
@@ -433,17 +431,14 @@ class WebController extends Controller
                 'is_deleted' => false,
             ]);
         } elseif ($control->limit_type === 'option') {
-            foreach ($validated['options'] as $opt) {
-                if ($opt === null || $opt === '') {
-                    continue;
-                }
-
-                LimitValue::create([
-                    'control_id'   => $control->id,
-                    'option_value' => $opt,
-                    'is_deleted'   => false,
-                ]);
-            }
+            $options = array_filter($validated['options'], function ($opt) {
+                return $opt !== null && $opt !== '';
+            });
+            LimitValue::create([
+                'control_id'   => $control->id,
+                'option_value' => implode(',', $options),
+                'is_deleted'   => false,
+            ]);
         } elseif ($control->limit_type === 'text') {
             LimitValue::create([
                 'control_id' => $control->id,
@@ -502,14 +497,14 @@ class WebController extends Controller
                 'is_deleted' => false,
             ]);
         } elseif ($control->limit_type === 'option') {
-            foreach ($validated['options'] as $opt) {
-                if ($opt === null || $opt === '') {continue;}
-                LimitValue::create([
-                    'control_id'   => $control->id,
-                    'option_value' => $opt,
-                    'is_deleted'   => false,
-                ]);
-            }
+            $options = array_filter($validated['options'], function ($opt) {
+                return $opt !== null && $opt !== '';
+            });
+            LimitValue::create([
+                'control_id'   => $control->id,
+                'option_value' => implode(',', $options),
+                'is_deleted'   => false,
+            ]);
         } elseif ($control->limit_type === 'text') {
             LimitValue::create([
                 'control_id' => $control->id,
