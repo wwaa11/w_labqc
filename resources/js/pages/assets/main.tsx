@@ -17,15 +17,46 @@ export default function AssetsMain() {
     return (
         <DashboardLayout>
             <Head title="Assets" />
-            <Box sx={{ p: { xs: 2, md: 3 } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' }, mb: 3, flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    mb: { xs: 2, sm: 3 },
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2
+                }}>
                     <Box>
-                        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Assets</Typography>
-                        <Typography variant="body1" color="text.secondary">Manage lab assets</Typography>
+                        <Typography
+                            variant="h3"
+                            sx={{
+                                fontWeight: 700,
+                                mb: 1,
+                                fontSize: { xs: '1.75rem', sm: '2.125rem', md: '3rem' }
+                            }}
+                        >
+                            Assets
+                        </Typography>
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
+                            Manage lab assets
+                        </Typography>
                     </Box>
-                    <Button variant="contained" onClick={() => router.get(route('assets.create'))} sx={{ width: { xs: '100%', md: 'auto' } }}>Add Asset</Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => router.get(route('assets.create'))}
+                        sx={{
+                            width: { xs: '100%', sm: 'auto' },
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
+                    >
+                        Add Asset
+                    </Button>
                 </Box>
-                <Paper sx={{ p: { xs: 2, md: 3 }, overflowX: 'auto' }}>
+                <Paper sx={{ p: { xs: 2, sm: 3 }, overflowX: 'auto' }}>
                     <DataGrid
                         autoHeight
                         rows={(assets || []).map((a: any) => ({
@@ -60,16 +91,42 @@ export default function AssetsMain() {
                         disableColumnMenu
                         hideFooterSelectedRowCount
                         sx={{
-                            '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' },
+                            '& .MuiDataGrid-virtualScroller': { overflowX: 'auto' },
+                            '& .MuiDataGrid-cell': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                            '& .MuiDataGrid-columnHeader': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                            '& .MuiDataGrid-root': { overflowX: 'auto' },
+                            '& .MuiDataGrid-main': { overflowX: 'auto' }
                         }}
                     />
                 </Paper>
-                <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs">
-                    <DialogTitle>Delete Asset</DialogTitle>
-                    <DialogContent>Are you sure you want to delete this asset?</DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-                        <Button color="error" variant="contained" onClick={confirmDelete}>Delete</Button>
+                <Dialog
+                    open={confirmOpen}
+                    onClose={() => setConfirmOpen(false)}
+                    fullWidth
+                    maxWidth="xs"
+                    fullScreen={window.innerWidth < 600}
+                >
+                    <DialogTitle sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                        Delete Asset
+                    </DialogTitle>
+                    <DialogContent sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                        Are you sure you want to delete this asset?
+                    </DialogContent>
+                    <DialogActions sx={{ p: { xs: 2, sm: 3 } }}>
+                        <Button
+                            onClick={() => setConfirmOpen(false)}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            color="error"
+                            variant="contained"
+                            onClick={confirmDelete}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
+                            Delete
+                        </Button>
                     </DialogActions>
                 </Dialog>
             </Box>

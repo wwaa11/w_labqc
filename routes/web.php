@@ -89,6 +89,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('asset/{assetId}', 'RecordsByAsset')->name('byAsset');
             Route::post('asset/{assetId}/store', 'RecordsByAssetStore')->name('byAsset.store');
             Route::delete('asset/{assetId}/destroy/{recordId}', 'RecordsByAssetDestroy')->name('byAsset.destroy');
+            Route::post('asset/{assetId}/approve/{recordId}', 'RecordsByAssetApprove')->name('byAsset.approve');
             Route::post('approve/{id}', 'RecordsApprove')->name('approve');
             Route::delete('remove/{id}', 'RecordsRemove')->name('remove');
             Route::post('restore/{id}', 'RecordsRestore')->name('restore');

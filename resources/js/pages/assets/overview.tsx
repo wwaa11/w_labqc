@@ -56,7 +56,7 @@ interface AssetsOverviewProps {
 
 export default function AssetsOverview({ assetsByLocation, search, totalAssets, totalLocations }: AssetsOverviewProps) {
     const [searchTerm, setSearchTerm] = useState(search);
-    const [expandedLocations, setExpandedLocations] = useState<string[]>([]);
+    const [expandedLocations, setExpandedLocations] = useState<string[]>(Object.keys(assetsByLocation));
 
     const handleSearch = (event: React.FormEvent) => {
         event.preventDefault();

@@ -34,6 +34,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useState, useEffect, useMemo } from 'react';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import ClearIcon from '@mui/icons-material/Clear';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -52,7 +53,7 @@ const Transition = (props: any) => {
 export default function AssetTypesMain() {
     const { assetTypes, auth } = usePage().props as any;
     const theme = useTheme();
-    const isMobile = useMuiTheme ? useMediaQuery(useMuiTheme().breakpoints.down('md')) : false;
+    const isMobile = useMuiTheme ? useMediaQuery(useMuiTheme().breakpoints.down('sm')) : false;
 
     const [search, setSearch] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -288,30 +289,49 @@ export default function AssetTypesMain() {
                 {/* Header Section */}
                 <Box sx={{
                     display: 'flex',
-                    flexDirection: { xs: 'column', md: 'row' },
+                    flexDirection: { xs: 'column', sm: 'row' },
                     justifyContent: 'space-between',
-                    alignItems: { xs: 'stretch', md: 'center' },
-                    mb: 4,
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    mb: { xs: 3, sm: 4 },
                     gap: 2
                 }}>
                     <Box>
-                        <Typography variant="h3" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
+                        <Typography
+                            variant="h3"
+                            component="h1"
+                            sx={{
+                                fontWeight: 700,
+                                mb: 1,
+                                fontSize: { xs: '1.75rem', sm: '2.125rem', md: '3rem' }
+                            }}
+                        >
                             Asset Types
                         </Typography>
-                        <Typography variant="body1" color="text.secondary">
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
                             Manage and organize your asset type categories
                         </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexDirection: { xs: 'column', md: 'row' }, width: { xs: '100%', md: 'auto' } }}>
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 2,
+                        alignItems: 'center',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        width: { xs: '100%', sm: 'auto' }
+                    }}>
                         <Button
                             variant="contained"
                             startIcon={<AddIcon />}
                             onClick={handleCreate}
                             size="large"
                             sx={{
-                                width: { xs: '100%', md: 'auto' },
-                                height: 48,
-                                px: 3,
+                                width: { xs: '100%', sm: 'auto' },
+                                height: { xs: 44, sm: 48 },
+                                px: { xs: 2, sm: 3 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' }
                             }}
                         >
                             Add Asset Type
@@ -320,8 +340,8 @@ export default function AssetTypesMain() {
                 </Box>
 
                 {/* Statistics Cards */}
-                <Grid container spacing={2} sx={{ mb: 4 }}>
-                    <Grid item xs={6} md={3}>
+                <Grid container spacing={2} sx={{ mb: { xs: 3, sm: 4 } }}>
+                    <Grid item xs={6} sm={3}>
                         <StatCard
                             title="Total Types"
                             value={stats.total}
@@ -329,7 +349,7 @@ export default function AssetTypesMain() {
                             color={theme.palette.primary.main}
                         />
                     </Grid>
-                    <Grid item xs={6} md={3}>
+                    <Grid item xs={6} sm={3}>
                         <StatCard
                             title="With Assets"
                             value={stats.withAssets}
@@ -340,8 +360,32 @@ export default function AssetTypesMain() {
                 </Grid>
 
                 {/* Search and Filters Section */}
-                <Paper sx={{ p: 3, mb: 4 }}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Paper elevation={1} sx={{
+                    p: { xs: 2, sm: 3 },
+                    mb: { xs: 3, sm: 4 },
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider'
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 2
+                    }}>
+                        <SearchIcon color="primary" fontSize="small" />
+                        <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, fontWeight: 600 }}>
+                            Search Asset Types
+                        </Typography>
+                    </Box>
+
+                    <Box sx={{
+                        display: 'flex',
+                        gap: { xs: 1, sm: 2 },
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        flexDirection: { xs: 'column', sm: 'row' }
+                    }}>
                         <TextField
                             fullWidth
                             placeholder="Search asset types by name or associated asset..."
@@ -369,43 +413,70 @@ export default function AssetTypesMain() {
                                     </InputAdornment>
                                 ),
                             }}
-                            sx={{ minWidth: 300 }}
+                            sx={{
+                                minWidth: { xs: '100%', sm: 300 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' }
+                            }}
                         />
-                        <Button
-                            variant="outlined"
-                            onClick={handleSearch}
-                            disabled={isLoading}
-                            sx={{ minWidth: 100 }}
-                        >
-                            Search
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            onClick={handleReset}
-                            disabled={isLoading}
-                            sx={{ minWidth: 100 }}
-                        >
-                            Reset
-                        </Button>
-                        <Tooltip title="Refresh">
-                            <IconButton
-                                onClick={handleRefresh}
+                        <Box sx={{
+                            display: 'flex',
+                            gap: 1,
+                            width: { xs: '100%', sm: 'auto' },
+                            justifyContent: { xs: 'space-between', sm: 'flex-start' }
+                        }}>
+                            <Button
+                                variant="contained"
+                                onClick={handleSearch}
                                 disabled={isLoading}
-                                sx={{ ml: 'auto' }}
+                                startIcon={<SearchIcon />}
+                                sx={{
+                                    minWidth: { xs: 'auto', sm: 100 },
+                                    flex: { xs: 1, sm: 'none' },
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                    px: { xs: 2, sm: 3 },
+                                    py: { xs: 1, sm: 1.5 }
+                                }}
                             >
-                                <RefreshIcon />
-                            </IconButton>
-                        </Tooltip>
+                                Search
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={handleReset}
+                                disabled={isLoading}
+                                startIcon={<ClearIcon />}
+                                sx={{
+                                    minWidth: { xs: 'auto', sm: 100 },
+                                    flex: { xs: 1, sm: 'none' },
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                    px: { xs: 2, sm: 3 },
+                                    py: { xs: 1, sm: 1.5 }
+                                }}
+                            >
+                                Reset
+                            </Button>
+                            <Tooltip title="Refresh">
+                                <IconButton
+                                    onClick={handleRefresh}
+                                    disabled={isLoading}
+                                    sx={{
+                                        ml: { xs: 0, sm: 'auto' },
+                                        fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                                    }}
+                                >
+                                    <RefreshIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
                     </Box>
                 </Paper>
 
                 {/* Asset Types Data View */}
                 {isLoading ? (
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         {[...Array(6)].map((_, index) => (
                             <Grid item xs={12} sm={6} md={4} key={index}>
                                 <Card>
-                                    <CardContent sx={{ p: 3 }}>
+                                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                         <Skeleton variant="text" width="60%" height={32} />
                                         <Skeleton variant="text" width="40%" height={24} sx={{ mt: 1 }} />
                                         <Skeleton variant="rectangular" height={60} sx={{ mt: 2, borderRadius: 1 }} />
@@ -416,12 +487,20 @@ export default function AssetTypesMain() {
                         ))}
                     </Grid>
                 ) : filteredAssetTypes.length === 0 ? (
-                    <Paper sx={{ p: 6, textAlign: 'center' }}>
-                        <CategoryIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                    <Paper sx={{ p: { xs: 4, sm: 6 }, textAlign: 'center' }}>
+                        <CategoryIcon sx={{ fontSize: { xs: 48, sm: 64 }, color: 'text.secondary', mb: 2 }} />
+                        <Typography
+                            variant="h6"
+                            color="text.secondary"
+                            sx={{ mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                        >
                             {search ? 'No asset types found' : 'No asset types yet'}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 3, fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
                             {search
                                 ? 'Try adjusting your search criteria'
                                 : 'Get started by creating your first asset type'
@@ -432,6 +511,7 @@ export default function AssetTypesMain() {
                                 variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={handleCreate}
+                                sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
                             >
                                 Create First Asset Type
                             </Button>
@@ -468,7 +548,15 @@ export default function AssetTypesMain() {
                                 disableRowSelectionOnClick
                                 disableColumnMenu
                                 hideFooterSelectedRowCount
-                                sx={{ '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' } }}
+                                sx={{
+                                    '& .MuiDataGrid-virtualScroller': { overflowX: 'auto' },
+                                    '& .MuiDataGrid-cell': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                    '& .MuiDataGrid-columnHeader': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                    '& .MuiDataGrid-root': { border: 'none' },
+                                    '& .MuiDataGrid-cell:focus': { outline: 'none' },
+                                    '& .MuiDataGrid-columnHeader:focus': { outline: 'none' },
+                                    '& .MuiDataGrid-columnHeader:focus-within': { outline: 'none' }
+                                }}
                             />
                         </Box>
                     </>
@@ -505,11 +593,33 @@ export default function AssetTypesMain() {
                         </Typography>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 3, pt: 1, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
-                    <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <DialogActions sx={{
+                    p: { xs: 2, sm: 3 },
+                    pt: 1,
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 1
+                }}>
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        variant="outlined"
+                        sx={{
+                            width: { xs: '100%', sm: 'auto' },
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
+                    >
                         Cancel
                     </Button>
-                    <Button onClick={confirmDelete} color="error" variant="contained" startIcon={<DeleteIcon />} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                    <Button
+                        onClick={confirmDelete}
+                        color="error"
+                        variant="contained"
+                        startIcon={<DeleteIcon />}
+                        sx={{
+                            width: { xs: '100%', sm: 'auto' },
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
+                    >
                         Delete
                     </Button>
                 </DialogActions>

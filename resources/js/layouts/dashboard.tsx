@@ -364,9 +364,17 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
                     {drawerContent}
                 </Drawer>
 
-                <Box component="main" flexGrow={1} p={{ xs: 2, md: 6 }} sx={{ width: '100%', minWidth: 0, overflowX: 'hidden' }}>
+                <Box component="main" flexGrow={1} p={{ xs: 1, sm: 2, md: 6 }} sx={{ width: '100%', minWidth: 0, overflowX: 'hidden' }}>
                     {isMobile && <Toolbar />}
-                    <Container maxWidth={false} disableGutters sx={{ bgcolor: 'background.paper', borderRadius: 0, boxShadow: 1, p: 4, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
+                    <Container maxWidth={false} disableGutters sx={{
+                        bgcolor: 'background.paper',
+                        borderRadius: 0,
+                        boxShadow: 1,
+                        p: { xs: 2, sm: 3, md: 4 },
+                        width: '100%',
+                        maxWidth: '100%',
+                        overflowX: 'hidden'
+                    }}>
                         {children}
                     </Container>
                     {flashMessage && (

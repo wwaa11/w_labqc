@@ -41,42 +41,132 @@ export default function AssetsCreate() {
     return (
         <DashboardLayout>
             <Head title="Create Asset" />
-            <Box sx={{ p: { xs: 2, md: 3 } }}>
-                <Box sx={{ mb: 4 }}>
-                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Create Asset</Typography>
-                    <Typography variant="body1" color="text.secondary">Add a new asset</Typography>
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+                    <Typography
+                        variant="h3"
+                        sx={{
+                            fontWeight: 700,
+                            mb: 1,
+                            fontSize: { xs: '1.75rem', sm: '2.125rem', md: '3rem' }
+                        }}
+                    >
+                        Create Asset
+                    </Typography>
+                    <Typography
+                        variant="body1"
+                        color="text.secondary"
+                        sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                    >
+                        Add a new asset
+                    </Typography>
                 </Box>
-                <Paper sx={{ p: { xs: 2, md: 3 } }}>
+                <Paper sx={{ p: { xs: 2, sm: 3 } }}>
                     <form onSubmit={handleSubmit}>
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} sm={6}>
                                 <FormControl fullWidth error={!!errors?.asset_type_id}>
-                                    <InputLabel id="at-label">Asset Type</InputLabel>
-                                    <Select labelId="at-label" label="Asset Type" value={data.asset_type_id} onChange={onChangeAssetType} required>
-                                        <MenuItem value=""><em>Select asset type</em></MenuItem>
-                                        {assetTypes.map((at: any) => (<MenuItem key={at.id} value={at.id}>{at.asset_type_name}</MenuItem>))}
+                                    <InputLabel id="at-label" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                        Asset Type
+                                    </InputLabel>
+                                    <Select
+                                        labelId="at-label"
+                                        label="Asset Type"
+                                        value={data.asset_type_id}
+                                        onChange={onChangeAssetType}
+                                        required
+                                        sx={{
+                                            '& .MuiSelect-select': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                        }}
+                                    >
+                                        <MenuItem value="" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                            <em>Select asset type</em>
+                                        </MenuItem>
+                                        {assetTypes.map((at: any) => (
+                                            <MenuItem key={at.id} value={at.id} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                                {at.asset_type_name}
+                                            </MenuItem>
+                                        ))}
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
-                                <TextField fullWidth label="Name" value={data.name} onChange={(e) => setData('name', e.target.value)} required error={!!errors?.name} helperText={errors?.name} />
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Name"
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
+                                    required
+                                    error={!!errors?.name}
+                                    helperText={errors?.name}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiFormHelperText-root': { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                                    }}
+                                />
                             </Grid>
-                            <Grid item xs={12} md={6}>
-                                <TextField fullWidth label="Frequency" value={data.frequency} onChange={(e) => setData('frequency', e.target.value)} />
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Frequency"
+                                    value={data.frequency}
+                                    onChange={(e) => setData('frequency', e.target.value)}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
+                                />
                             </Grid>
-                            <Grid item xs={12} md={6}>
-                                <TextField fullWidth label="Environment" value={data.environment} onChange={(e) => setData('environment', e.target.value)} />
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Environment"
+                                    value={data.environment}
+                                    onChange={(e) => setData('environment', e.target.value)}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
+                                />
                             </Grid>
-                            <Grid item xs={12} md={4}>
-                                <TextField fullWidth label="Brand" value={data.brand} onChange={(e) => setData('brand', e.target.value)} />
+                            <Grid item xs={12} sm={4}>
+                                <TextField
+                                    fullWidth
+                                    label="Brand"
+                                    value={data.brand}
+                                    onChange={(e) => setData('brand', e.target.value)}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
+                                />
                             </Grid>
-                            <Grid item xs={12} md={4}>
-                                <TextField fullWidth label="Model" value={data.model} onChange={(e) => setData('model', e.target.value)} />
+                            <Grid item xs={12} sm={4}>
+                                <TextField
+                                    fullWidth
+                                    label="Model"
+                                    value={data.model}
+                                    onChange={(e) => setData('model', e.target.value)}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
+                                />
                             </Grid>
-                            <Grid item xs={12} md={4}>
-                                <TextField fullWidth label="Serial Number" value={data.serial_number} onChange={(e) => setData('serial_number', e.target.value)} />
+                            <Grid item xs={12} sm={4}>
+                                <TextField
+                                    fullWidth
+                                    label="Serial Number"
+                                    value={data.serial_number}
+                                    onChange={(e) => setData('serial_number', e.target.value)}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
+                                />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} sm={6}>
                                 <Autocomplete
                                     freeSolo
                                     options={(locations || []).filter((loc: any) => loc && typeof loc === 'string')}
@@ -96,17 +186,58 @@ export default function AssetsCreate() {
                                             fullWidth
                                             error={!!errors?.location}
                                             helperText={errors?.location}
+                                            sx={{
+                                                '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                                '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                                '& .MuiFormHelperText-root': { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                                            }}
                                         />
                                     )}
                                 />
                             </Grid>
                             <Grid item xs={12}>
-                                <TextField fullWidth label="Memo" value={data.memo} onChange={(e) => setData('memo', e.target.value)} multiline minRows={3} />
+                                <TextField
+                                    fullWidth
+                                    label="Memo"
+                                    value={data.memo}
+                                    onChange={(e) => setData('memo', e.target.value)}
+                                    multiline
+                                    minRows={3}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
+                                />
                             </Grid>
                             <Grid item xs={12}>
-                                <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'stretch', md: 'flex-end' }, flexDirection: { xs: 'column', md: 'row' } }}>
-                                    <Button variant="outlined" onClick={() => router.get(route('assets.main'))} disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>Cancel</Button>
-                                    <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', md: 'auto' } }}>{processing ? 'Creating...' : 'Create Asset'}</Button>
+                                <Box sx={{
+                                    display: 'flex',
+                                    gap: 2,
+                                    justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                                    flexDirection: { xs: 'column', sm: 'row' }
+                                }}>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => router.get(route('assets.main'))}
+                                        disabled={processing}
+                                        sx={{
+                                            width: { xs: '100%', sm: 'auto' },
+                                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        disabled={processing}
+                                        sx={{
+                                            width: { xs: '100%', sm: 'auto' },
+                                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                                        }}
+                                    >
+                                        {processing ? 'Creating...' : 'Create Asset'}
+                                    </Button>
                                 </Box>
                             </Grid>
                         </Grid>

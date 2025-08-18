@@ -121,14 +121,33 @@ export default function UsersMain() {
     return (
         <DashboardLayout>
             <Head title="Users" />
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
                 {/* Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    mb: { xs: 3, sm: 4 },
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2
+                }}>
                     <Box>
-                        <Typography variant="h3" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
+                        <Typography
+                            variant="h3"
+                            component="h1"
+                            sx={{
+                                fontWeight: 700,
+                                mb: 1,
+                                fontSize: { xs: '1.75rem', sm: '2.125rem', md: '3rem' }
+                            }}
+                        >
                             Users
                         </Typography>
-                        <Typography variant="body1" color="text.secondary">
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
                             Manage and organize your users
                         </Typography>
                     </Box>

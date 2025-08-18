@@ -35,14 +35,35 @@ export default function Login({ status }: LoginProps) {
     return (
         <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" px={2}>
             <Head title="Log in" />
-            <Paper sx={{ width: '100%', maxWidth: 420, p: 4, borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <Paper sx={{
+                width: '100%',
+                maxWidth: { xs: '100%', sm: 420 },
+                p: { xs: 3, sm: 4 },
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: 'none',
+                mx: { xs: 1, sm: 2 }
+            }}>
                 <Box display="flex" flexDirection="column" alignItems="center" mb={1}>
                     <Logo className="h-6" />
-                    <Typography variant="subtitle1" fontWeight={700} mt={1}>
+                    <Typography
+                        variant="subtitle1"
+                        fontWeight={700}
+                        mt={1}
+                        sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                    >
                         {(import.meta as any).env?.VITE_APP_NAME || 'Laravel'}
                     </Typography>
                 </Box>
-                <Typography variant="h5" fontWeight={700} mb={2}>Sign in</Typography>
+                <Typography
+                    variant="h5"
+                    fontWeight={700}
+                    mb={2}
+                    sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' } }}
+                >
+                    Sign in
+                </Typography>
                 <form onSubmit={submit} noValidate>
                     <Box mb={2}>
                         <TextField
@@ -81,7 +102,11 @@ export default function Login({ status }: LoginProps) {
                         color="primary"
                         fullWidth
                         size="large"
-                        sx={{ py: 1.25, fontWeight: 700, fontSize: '1rem' }}
+                        sx={{
+                            py: { xs: 1, sm: 1.25 },
+                            fontWeight: 700,
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
                         disabled={processing}
                     >
                         {processing ? 'Signing in…' : 'Sign in'}

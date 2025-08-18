@@ -4,6 +4,9 @@ import { Box, Typography, Paper, Button, IconButton, Chip, Dialog, DialogTitle, 
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useState } from 'react';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 
@@ -74,29 +77,86 @@ export default function RecordsMain() {
     return (
         <DashboardLayout>
             <Head title="Records Management" />
-            <Box sx={{ p: { xs: 2, md: 3 } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' }, mb: 3, gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    mb: { xs: 2, sm: 3 },
+                    gap: 2,
+                    flexDirection: { xs: 'column', sm: 'row' }
+                }}>
                     <Box>
-                        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>Records Management</Typography>
-                        <Typography variant="body1" color="text.secondary">Approve and manage control records</Typography>
+                        <Typography
+                            variant="h3"
+                            sx={{
+                                fontWeight: 700,
+                                mb: 1,
+                                fontSize: { xs: '1.75rem', sm: '2.125rem', md: '3rem' }
+                            }}
+                        >
+                            Records Management
+                        </Typography>
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
+                            Approve and manage control records
+                        </Typography>
                     </Box>
                 </Box>
 
                 {/* Filters */}
-                <Paper sx={{ p: 2, mb: 3 }}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>Filters</Typography>
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <FormControl size="small" sx={{ minWidth: 150 }}>
-                            <InputLabel>Status</InputLabel>
+                <Paper elevation={1} sx={{
+                    p: { xs: 2, sm: 3 },
+                    mb: { xs: 2, sm: 3 },
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider'
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 2
+                    }}>
+                        <FilterListIcon color="primary" fontSize="small" />
+                        <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, fontWeight: 600 }}>
+                            Filter Records
+                        </Typography>
+                    </Box>
+
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fit, minmax(200px, 1fr))' },
+                        gap: { xs: 2, sm: 2 },
+                        alignItems: 'end'
+                    }}>
+                        <FormControl size="small" fullWidth>
+                            <InputLabel sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                Status
+                            </InputLabel>
                             <Select
                                 value={statusFilter}
                                 label="Status"
                                 onChange={(e) => setStatusFilter(e.target.value)}
+                                sx={{
+                                    '& .MuiSelect-select': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                }}
                             >
-                                <MenuItem value="unapproved">Unapproved</MenuItem>
-                                <MenuItem value="approved">Approved</MenuItem>
-                                <MenuItem value="deleted">Deleted Records</MenuItem>
-                                <MenuItem value="all">All Records</MenuItem>
+                                <MenuItem value="unapproved" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                    Unapproved
+                                </MenuItem>
+                                <MenuItem value="approved" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                    Approved
+                                </MenuItem>
+                                <MenuItem value="deleted" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                    Deleted Records
+                                </MenuItem>
+                                <MenuItem value="all" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                    All Records
+                                </MenuItem>
                             </Select>
                         </FormControl>
 
@@ -107,6 +167,11 @@ export default function RecordsMain() {
                             value={dateFrom}
                             onChange={(e) => setDateFrom(e.target.value)}
                             InputLabelProps={{ shrink: true }}
+                            fullWidth
+                            sx={{
+                                '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                            }}
                         />
 
                         <TextField
@@ -116,20 +181,51 @@ export default function RecordsMain() {
                             value={dateTo}
                             onChange={(e) => setDateTo(e.target.value)}
                             InputLabelProps={{ shrink: true }}
+                            fullWidth
+                            sx={{
+                                '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                            }}
                         />
+                    </Box>
 
-                        <Button variant="contained" onClick={applyFilters}>
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 1,
+                        mt: 2,
+                        justifyContent: { xs: 'stretch', sm: 'flex-start' }
+                    }}>
+                        <Button
+                            variant="contained"
+                            onClick={applyFilters}
+                            startIcon={<SearchIcon />}
+                            sx={{
+                                flex: { xs: 1, sm: 'none' },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                px: { xs: 2, sm: 3 },
+                                py: { xs: 1, sm: 1.5 }
+                            }}
+                        >
                             Apply Filters
                         </Button>
 
-                        <Button variant="outlined" onClick={clearFilters}>
+                        <Button
+                            variant="outlined"
+                            onClick={clearFilters}
+                            startIcon={<ClearIcon />}
+                            sx={{
+                                flex: { xs: 1, sm: 'none' },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                px: { xs: 2, sm: 3 },
+                                py: { xs: 1, sm: 1.5 }
+                            }}
+                        >
                             Clear Filters
                         </Button>
                     </Box>
                 </Paper>
-                <Paper sx={{ p: { xs: 2, md: 3 }, overflowX: 'auto' }}>
+                <Paper sx={{ p: { xs: 2, sm: 3 }, height: '600px', overflow: 'hidden' }}>
                     <DataGrid
-                        autoHeight
                         rows={(records || []).map((r: any) => ({
                             id: r.id,
                             assetType: r.asset_type_name || '-',
@@ -146,15 +242,17 @@ export default function RecordsMain() {
                             updatedAt: r.updated_at ? new Date(r.updated_at).toLocaleString() : '-',
                         }))}
                         columns={[
-                            { field: 'assetType', headerName: 'Asset Type', flex: 1, minWidth: 150 },
-                            { field: 'location', headerName: 'Location', flex: 0.8, minWidth: 120 },
-                            { field: 'controlType', headerName: 'Control Type', flex: 1, minWidth: 150 },
-                            { field: 'recordValue', headerName: 'Record Value', flex: 0.8, minWidth: 120 },
+                            { field: 'assetType', headerName: 'Asset Type', flex: 1, minWidth: 150, sortable: true, filterable: true },
+                            { field: 'location', headerName: 'Location', flex: 0.8, minWidth: 120, sortable: true, filterable: true },
+                            { field: 'controlType', headerName: 'Control Type', flex: 1, minWidth: 150, sortable: true, filterable: true },
+                            { field: 'recordValue', headerName: 'Record Value', flex: 0.8, minWidth: 120, sortable: true, filterable: true },
                             {
                                 field: 'recordResult',
                                 headerName: 'Result',
                                 flex: 0.6,
                                 minWidth: 100,
+                                sortable: true,
+                                filterable: true,
                                 renderCell: (params) => {
                                     const result = params.row.recordResult;
                                     if (result === 'PASS') {
@@ -166,16 +264,18 @@ export default function RecordsMain() {
                                     }
                                 }
                             },
-                            { field: 'verifiedBy', headerName: 'Verified By', flex: 0.8, minWidth: 120 },
+                            { field: 'verifiedBy', headerName: 'Verified By', flex: 0.8, minWidth: 120, sortable: true, filterable: true },
                             {
                                 field: 'status',
                                 headerName: 'Status',
                                 flex: 0.7,
                                 minWidth: 120,
+                                sortable: true,
+                                filterable: true,
                                 renderCell: (params) => getStatusChip(params.row.status, params.row.statusColor)
                             },
-                            { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 150 },
-                            { field: 'createdAt', headerName: 'Created', flex: 0.8, minWidth: 150 },
+                            { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 150, sortable: true, filterable: true },
+                            { field: 'createdAt', headerName: 'Created', flex: 0.8, minWidth: 150, sortable: true, filterable: true },
                             {
                                 field: 'actions',
                                 headerName: 'Actions',
@@ -224,25 +324,39 @@ export default function RecordsMain() {
                                 }
                             }
                         ] as GridColDef[]}
-                        pageSizeOptions={[10, 25, 50]}
-                        initialState={{ pagination: { paginationModel: { pageSize: 25, page: 0 } } }}
+                        pagination
+                        paginationModel={{ page: 0, pageSize: 25 }}
+                        pageSizeOptions={[10, 25, 50, 100]}
+                        onPaginationModelChange={(model) => {
+                            // Handle pagination changes if needed
+                        }}
                         disableRowSelectionOnClick
-                        disableColumnMenu
+                        disableColumnMenu={false}
                         hideFooterSelectedRowCount
+                        autoHeight={false}
                         sx={{
-                            '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' },
+                            '& .MuiDataGrid-virtualScroller': { overflowX: 'auto' },
+                            '& .MuiDataGrid-cell': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                            '& .MuiDataGrid-columnHeader': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                            '& .MuiDataGrid-footerContainer': { fontSize: { xs: '0.875rem', sm: '1rem' } }
                         }}
                     />
                 </Paper>
-                <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="sm">
-                    <DialogTitle>
+                <Dialog
+                    open={confirmOpen}
+                    onClose={() => setConfirmOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                    fullScreen={window.innerWidth < 600}
+                >
+                    <DialogTitle sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         {actionType === 'approve' ? 'Approve Record' : actionType === 'remove' ? 'Remove Record' : 'Restore Record'}
                     </DialogTitle>
-                    <DialogContent>
+                    <DialogContent sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                         {actionType === 'approve' && (
                             <>
                                 Are you sure you want to approve this record?
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                                     This will stamp the record with your approval.
                                 </Typography>
                             </>
@@ -250,7 +364,7 @@ export default function RecordsMain() {
                         {actionType === 'remove' && (
                             <>
                                 Are you sure you want to remove this record?
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                                     This action cannot be undone. The record will be permanently removed.
                                 </Typography>
                                 <TextField
@@ -261,25 +375,35 @@ export default function RecordsMain() {
                                     placeholder="Enter the reason for deleting this record..."
                                     value={deleteMemo}
                                     onChange={(e) => setDeleteMemo(e.target.value)}
-                                    sx={{ mt: 2 }}
+                                    sx={{
+                                        mt: 2,
+                                        '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
                                 />
                             </>
                         )}
                         {actionType === 'restore' && (
                             <>
                                 Are you sure you want to restore this record?
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                                     This will restore the record and make it available again.
                                 </Typography>
                             </>
                         )}
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                    <DialogActions sx={{ p: { xs: 2, sm: 3 } }}>
+                        <Button
+                            onClick={() => setConfirmOpen(false)}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             color={actionType === 'approve' ? 'success' : actionType === 'remove' ? 'error' : 'primary'}
                             variant="contained"
                             onClick={confirmAction}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
                         >
                             {actionType === 'approve' ? 'Approve' : actionType === 'remove' ? 'Remove' : 'Restore'}
                         </Button>

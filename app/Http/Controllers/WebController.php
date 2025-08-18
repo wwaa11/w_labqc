@@ -115,7 +115,7 @@ class WebController extends Controller
      */
     private function getLimitValue($control)
     {
-        $limitValue = LimitValue::where('control_id', $control->id)->first();
+        $limitValue = LimitValue::where('control_id', $control->id)->where('is_deleted', false)->first();
 
         if (! $limitValue) {
             return null;
@@ -141,6 +141,7 @@ class WebController extends Controller
         }
 
         return LimitValue::where('control_id', $control->id)
+            ->where('is_deleted', false)
             ->pluck('option_value')
             ->toArray();
     }
@@ -446,13 +447,13 @@ class WebController extends Controller
             $control->asset_type_name = $assetType->asset_type_name;
             $value                    = null;
             if ($control->limit_type == 'range') {
-                $lv    = LimitValue::where('control_id', $control->id)->first();
+                $lv    = LimitValue::where('control_id', $control->id)->where('is_deleted', false)->first();
                 $value = $lv->min_value . ' - ' . $lv->max_value;
             } elseif ($control->limit_type == 'option') {
-                $lv    = LimitValue::where('control_id', $control->id)->get();
+                $lv    = LimitValue::where('control_id', $control->id)->where('is_deleted', false)->get();
                 $value = $lv->pluck('option_value')->toArray();
             } elseif ($control->limit_type == 'text') {
-                $lv    = LimitValue::where('control_id', $control->id)->first();
+                $lv    = LimitValue::where('control_id', $control->id)->where('is_deleted', false)->first();
                 $value = $lv->text_value;
             }
             $control->limit_value = $value;
@@ -510,14 +511,18 @@ class WebController extends Controller
                 'is_deleted' => false,
             ]);
         } elseif ($control->limit_type === 'option') {
+            // Create separate record for each option
             $options = array_filter($validated['options'], function ($opt) {
                 return $opt !== null && $opt !== '';
             });
-            LimitValue::create([
-                'control_id'   => $control->id,
-                'option_value' => implode(',', $options),
-                'is_deleted'   => false,
-            ]);
+
+            foreach ($options as $option) {
+                LimitValue::create([
+                    'control_id'   => $control->id,
+                    'option_value' => $option,
+                    'is_deleted'   => false,
+                ]);
+            }
         } elseif ($control->limit_type === 'text') {
             LimitValue::create([
                 'control_id' => $control->id,
@@ -533,6 +538,44 @@ class WebController extends Controller
     {
         $control = Control::with(['limitValues' => function ($q) {$q->where('is_deleted', false);}])->findOrFail($id);
         $controlTypes = ControlType::notDeleted()->with(['assetType:id,asset_type_name'])->get(['id', 'asset_type_id', 'control_type_name']);
+
+        $minValue    = '';
+        $maxValue    = '';
+        $textValue   = '';
+        $optionValue = [];
+
+        if ($control->limit_type == 'range' || $control->limit_type == 'text') {
+            $limitValue = LimitValue::where('control_id', $control->id)->where('is_deleted', false)->first();
+            if ($limitValue) {
+                $minValue  = $limitValue->min_value ?? '';
+                $maxValue  = $limitValue->max_value ?? '';
+                $textValue = $limitValue->text_value ?? '';
+            }
+        } else {
+            // For option type
+            $limitValues = LimitValue::where('control_id', $control->id)->where('is_deleted', false)->get();
+            foreach ($limitValues as $lv) {
+                if ($lv->option_value) {
+                    $optionValue[] = $lv->option_value;
+                }
+            }
+        }
+
+        $control = [
+            'id'              => $control->id,
+            'control_name'    => $control->control_name,
+            'control_type_id' => $control->control_type_id,
+            'brand'           => $control->brand,
+            'lot'             => $control->lot,
+            'expired'         => $control->expired,
+            'limit_type'      => $control->limit_type,
+            'min_value'       => $minValue,
+            'max_value'       => $maxValue,
+            'options'         => $optionValue,
+            'text_value'      => $textValue,
+            'memo'            => $control->memo,
+        ];
+
         return inertia('controls/edit', compact('control', 'controlTypes'));
     }
 
@@ -565,10 +608,11 @@ class WebController extends Controller
         $control->is_active = false;
         $control->save();
 
-        // soft-remove existing values
+        // Soft delete existing limit values
         LimitValue::where('control_id', $control->id)->update(['is_deleted' => true]);
 
         if ($control->limit_type === 'range') {
+            // Create single record for range type
             LimitValue::create([
                 'control_id' => $control->id,
                 'min_value'  => $validated['min_value'],
@@ -576,15 +620,20 @@ class WebController extends Controller
                 'is_deleted' => false,
             ]);
         } elseif ($control->limit_type === 'option') {
+            // Create separate record for each option
             $options = array_filter($validated['options'], function ($opt) {
                 return $opt !== null && $opt !== '';
             });
-            LimitValue::create([
-                'control_id'   => $control->id,
-                'option_value' => implode(',', $options),
-                'is_deleted'   => false,
-            ]);
+
+            foreach ($options as $option) {
+                LimitValue::create([
+                    'control_id'   => $control->id,
+                    'option_value' => $option,
+                    'is_deleted'   => false,
+                ]);
+            }
         } elseif ($control->limit_type === 'text') {
+            // Create single record for text type
             LimitValue::create([
                 'control_id' => $control->id,
                 'text_value' => $validated['text_value'],
@@ -792,10 +841,9 @@ class WebController extends Controller
                 }
 
                 // Add asset type information
-                $record->asset_type_name = $record->controlType->assetType->asset_type_name ?? 'Unknown';
-
-                // Get location from user
-                $record->location = auth()->user()->location ?? 'Unknown';
+                $asset                   = Asset::find($record->asset_id);
+                $record->location        = $asset->location ?? 'Unknown';
+                $record->asset_type_name = $asset->assetType->asset_type_name ?? 'Unknown';
 
                 return $record;
             });
@@ -855,13 +903,16 @@ class WebController extends Controller
         $allControls = ControlType::where('asset_type_id', $asset->asset_type_id)->where('is_deleted', false)->get();
         $datas       = [];
         foreach ($allControls as $control) {
-            $datas[$control->control_type_name] = [
-                'control_type_id' => $control->id,
-                'activeControl'   => Control::where('control_type_id', $control->id)->where('is_active', true)->first(),
-                'limit_type'      => $control->limit_type,
-                'show_chart'      => true, // Show chart for all controls with numeric data
-                'show_statistics' => true, // Show statistics for all controls with numeric data
-            ];
+            $finControl = Control::where('control_type_id', $control->id)->where('is_deleted', false)->where('is_active', true)->first();
+            if ($finControl !== null) {
+                $datas[$control->control_type_name] = [
+                    'control_type_id' => $control->id,
+                    'activeControl'   => $finControl,
+                    'limit_type'      => $control->limit_type,
+                    'show_chart'      => true, // Show chart for all controls with numeric data
+                    'show_statistics' => true, // Show statistics for all controls with numeric data
+                ];
+            }
         }
 
         // Get records with date filtering
@@ -882,7 +933,7 @@ class WebController extends Controller
             $data['records'] = [];
         }
 
-        // Group records by control type
+        // Group records by control type and format datetime in Bangkok timezone
         foreach ($records as $record) {
             $controlTypeName = $record->controlType->control_type_name;
             if (isset($datas[$controlTypeName])) {
@@ -894,16 +945,17 @@ class WebController extends Controller
             if ($data['activeControl'] === null) {
                 continue;
             }
+
+            $data['limit_value']             = $this->getLimitValue($data['activeControl']);
+            $data['limit_options']           = $this->getLimitOptions($data['activeControl']);
+            $data['activeControl']['median'] = $this->getMedian($data['limit_value']);
+
             // Generate statistics if there are records
             if (! empty($data['records'])) {
                 $data['statistics'] = $this->getStatistics($data['records']);
+                $data['chart']      = $this->getChart($data['records']);
+
             }
-            // Generate chart data if there are records
-            if (! empty($data['records'])) {
-                $data['chart'] = $this->getChart($data['records']);
-            }
-            $data['limit_value']   = $this->getLimitValue($data['activeControl']);
-            $data['limit_options'] = $this->getLimitOptions($data['activeControl']);
         }
         // Sort the data by control type name
         ksort($datas);
@@ -975,6 +1027,19 @@ class WebController extends Controller
         return $statistics;
     }
 
+    private function getMedian($limitValue)
+    {
+        if (str_contains($limitValue, '-')) {
+            $explode = explode('-', $limitValue);
+            $min     = $explode[0];
+            $max     = $explode[1];
+            $median  = ($min + $max) / 2;
+        } else {
+            return null;
+        }
+        return number_format($median, 2);
+    }
+
     public function RecordsByAssetStore(Request $request, $assetId)
     {
         $validated = $request->validate([
@@ -993,8 +1058,9 @@ class WebController extends Controller
         $record->memo            = $validated['memo'] ?? null;
         $record->verified_by     = auth()->user()->user_id ?? 'Admin';
         $record->approved_by     = auth()->user()->name ?? auth()->user()->user_id ?? 'Admin';
-        $record->created_at      = $validated['created_at'];
-        $record->updated_at      = $validated['created_at'];
+
+        $record->created_at = $validated['created_at'];
+        $record->updated_at = $validated['created_at'];
         $record->save();
 
         return redirect()->route('records.byAsset', $assetId)->with('success', 'Record added successfully!');
@@ -1011,6 +1077,18 @@ class WebController extends Controller
         $record->save();
 
         return redirect()->route('records.byAsset', $assetId)->with('success', 'Record deleted successfully.');
+    }
+
+    public function RecordsByAssetApprove(Request $request, $assetId, $recordId)
+    {
+        $record = Record::where('asset_id', $assetId)
+            ->where('id', $recordId)
+            ->firstOrFail();
+
+        $record->approved_by = auth()->user()->name ?? auth()->user()->user_id ?? 'Admin';
+        $record->save();
+
+        return redirect()->route('records.byAsset', $assetId)->with('success', 'Record approved successfully.');
     }
 
     public function UserGuide()

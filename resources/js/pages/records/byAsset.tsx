@@ -46,6 +46,7 @@ interface Record {
 }
 
 interface ActiveControl {
+    median: string;
     id: number;
     control_name: string;
     brand: string;
@@ -59,6 +60,7 @@ interface ActiveControl {
 interface Statistics {
     count: string;
     mean: string;
+    median: string;
     sd: string;
     cv: string;
     min: string;
@@ -110,35 +112,51 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
     const confirmAction = () => {
         if (actionType && selectedId) {
             if (actionType === 'approve') {
-                router.post(route('records.approve', selectedId));
+                handleApproveRecord(selectedId);
             } else if (actionType === 'delete') {
-                setIsDeleting(true);
-                const memo = deleteMemo.trim() ? `Deleted: ${deleteMemo}` : 'Deleted';
-                router.delete(route('records.byAsset.destroy', { assetId: asset.id, recordId: selectedId }), {
-                    data: { memo },
-                    onSuccess: () => {
-                        setIsDeleting(false);
-                        // Success message will be shown via flash message after redirect
-                    },
-                    onError: (errors) => {
-                        setIsDeleting(false);
-                        console.error('Delete error:', errors);
-                        let errorMessage = 'Failed to delete record.';
-                        if (errors && typeof errors === 'object') {
-                            const errorKeys = Object.keys(errors);
-                            if (errorKeys.length > 0) {
-                                errorMessage = `Error: ${errors[errorKeys[0]][0]}`;
-                            }
-                        }
-                        // Error will be handled by Laravel's validation
-                    }
-                });
+                handleDeleteRecordAction(selectedId);
             }
         }
         setConfirmOpen(false);
         setSelectedId(null);
         setActionType(null);
         setDeleteMemo('');
+    };
+
+    const handleApproveRecord = (recordId: number) => {
+        router.post(route('records.byAsset.approve', { assetId: asset.id, recordId: recordId }), {}, {
+            onSuccess: () => {
+                // Reload the page after successful approval
+            },
+            onError: (errors) => {
+                console.error('Approval error:', errors);
+                // Error will be handled by Laravel's validation
+            }
+        });
+    };
+
+    const handleDeleteRecordAction = (recordId: number) => {
+        setIsDeleting(true);
+        const memo = deleteMemo.trim() ? `Deleted: ${deleteMemo}` : 'Deleted';
+        router.delete(route('records.byAsset.destroy', { assetId: asset.id, recordId: recordId }), {
+            data: { memo },
+            onSuccess: () => {
+                setIsDeleting(false);
+                // Success message will be shown via flash message after redirect
+            },
+            onError: (errors) => {
+                setIsDeleting(false);
+                console.error('Delete error:', errors);
+                let errorMessage = 'Failed to delete record.';
+                if (errors && typeof errors === 'object') {
+                    const errorKeys = Object.keys(errors);
+                    if (errorKeys.length > 0) {
+                        errorMessage = `Error: ${errors[errorKeys[0]][0]}`;
+                    }
+                }
+                // Error will be handled by Laravel's validation
+            }
+        });
     };
 
     const handleDeleteRecord = (recordId: number) => {
@@ -153,14 +171,55 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
         limitValue: string | null;
         limitOptions: string[];
     }) {
+        // Get current date and time in Asia/Bangkok timezone
+        const getCurrentDateTimeInBangkok = () => {
+            const now = new Date();
+
+            // Get Bangkok time by adding the timezone offset
+            const bangkokOffset = 7 * 60; // Bangkok is UTC+7
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const bangkokTime = new Date(utc + (bangkokOffset * 60000));
+
+            // Ensure we have valid date values
+            if (isNaN(bangkokTime.getTime())) {
+                // Fallback to current time if conversion fails
+                const fallbackDate = new Date();
+                const year = fallbackDate.getFullYear();
+                const month = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+                const date = String(fallbackDate.getDate()).padStart(2, '0');
+                const hours = String(fallbackDate.getHours()).padStart(2, '0');
+                const minutes = String(fallbackDate.getMinutes()).padStart(2, '0');
+
+                return {
+                    date: `${year}-${month}-${date}`,
+                    time: `${hours}:${minutes}`
+                };
+            }
+
+            // Format date as YYYY-MM-DD (for HTML5 date input)
+            const year = bangkokTime.getFullYear();
+            const month = String(bangkokTime.getMonth() + 1).padStart(2, '0');
+            const date = String(bangkokTime.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${date}`;
+
+            // Format time as HH:MM (for HTML5 time input)
+            const hours = String(bangkokTime.getHours()).padStart(2, '0');
+            const minutes = String(bangkokTime.getMinutes()).padStart(2, '0');
+            const formattedTime = `${hours}:${minutes}`;
+
+            return { date: formattedDate, time: formattedTime };
+        };
+
+        const currentDateTime = getCurrentDateTimeInBangkok();
+
         const { data, setData, post, processing, reset } = useForm({
             asset_id: String(asset.id),
             control_type_id: String(controlTypeId),
             record_value: '',
             record_result: '',
             memo: '',
-            created_at: new Date().toISOString().split('T')[0],
-            created_time: new Date().toTimeString().split(' ')[0],
+            created_at: currentDateTime.date,
+            created_time: currentDateTime.time,
         });
 
         // Calculate result in real-time when record_value changes
@@ -180,6 +239,7 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                 } else if (activeControl.limit_type === 'option') {
                     recordResult = limitOptions.includes(data.record_value) ? 'PASS' : 'FAIL';
                 }
+                // For 'text' type and other non-range types, record_result remains empty
 
                 setData('record_result', recordResult);
             }
@@ -188,18 +248,22 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
         const handleSubmit = (e: React.FormEvent) => {
             e.preventDefault();
 
-            // Combine date and time into datetime format expected by backend (Y-m-d H:i)
-            const combinedDateTime = `${data.created_at} ${data.created_time}`;
+            // Simply combine the date and time - they're already in Bangkok timezone
+            const combinedDateTime = `${data.created_at} ${data.created_time}:00`;
 
             // Create the data object to send
-            const formData = {
+            const formData: any = {
                 asset_id: data.asset_id,
                 control_type_id: data.control_type_id,
                 record_value: data.record_value,
-                record_result: data.record_result,
                 memo: data.memo,
                 created_at: combinedDateTime
             };
+
+            // Only include record_result when limit_type is 'range'
+            if (activeControl.limit_type === 'range') {
+                formData.record_result = data.record_result;
+            }
 
             // Use router.post directly to send the data
             router.post(route('records.byAsset.store', asset.id), formData, {
@@ -225,8 +289,8 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
         if (!activeControl) return null;
 
         return (
-            <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+            <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 2 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 0.5 }}>
                     <Chip label={activeControl.control_name} color="primary" size="small" />
                     {activeControl.brand && <Chip label={activeControl.brand} size="small" variant="outlined" />}
                     {activeControl.lot && <Chip label={`Lot: ${activeControl.lot}`} size="small" variant="outlined" />}
@@ -250,6 +314,9 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                     value={data.record_value}
                                     onChange={(e) => setData('record_value', e.target.value)}
                                     required
+                                    sx={{
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
                                 />
                             ) : activeControl.limit_type === 'option' ? (
                                 <FormControl fullWidth size="small">
@@ -264,6 +331,9 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                             return selected;
                                         }}
                                         required
+                                        sx={{
+                                            '& .MuiSelect-select': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                        }}
                                     >
                                         {limitOptions.map((option: string, index: number) => (
                                             <MenuItem key={index} value={option.trim()}>{option.trim()}</MenuItem>
@@ -278,6 +348,9 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                     value={data.record_value}
                                     onChange={(e) => setData('record_value', e.target.value)}
                                     required
+                                    sx={{
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
                                 />
                             )}
                         </Grid>
@@ -288,9 +361,12 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                 placeholder="Memo"
                                 value={data.memo}
                                 onChange={(e) => setData('memo', e.target.value)}
+                                sx={{
+                                    '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                }}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={1.5}>
+                        <Grid item xs={6} sm={1.5}>
                             <TextField
                                 size="small"
                                 fullWidth
@@ -299,9 +375,12 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                 onChange={(e) => setData('created_at', e.target.value)}
                                 required
                                 InputLabelProps={{ shrink: true }}
+                                sx={{
+                                    '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                }}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={1.5}>
+                        <Grid item xs={6} sm={1.5}>
                             <TextField
                                 size="small"
                                 fullWidth
@@ -310,10 +389,13 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                 onChange={(e) => setData('created_time', e.target.value)}
                                 required
                                 InputLabelProps={{ shrink: true }}
+                                sx={{
+                                    '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={1.5}>
-                            {data.record_value && data.record_result && (
+                            {data.record_value && data.record_result && activeControl.limit_type === 'range' && (
                                 <Chip
                                     label={data.record_result}
                                     color={data.record_result === 'PASS' ? 'success' : 'error'}
@@ -334,7 +416,9 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                     '&:disabled': {
                                         bgcolor: 'primary.main',
                                         opacity: 0.7
-                                    }
+                                    },
+                                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                                    py: { xs: 1, sm: 1.5 }
                                 }}
                             >
                                 {processing ? 'Adding...' : 'Add'}
@@ -346,10 +430,6 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
         );
     }
 
-    const getStatusChip = (status: string, statusColor: string) => {
-        return <Chip label={status} color={statusColor as any} size="small" />;
-    };
-
     // Check if a value is numeric
     const isNumeric = (value: string): boolean => {
         return !isNaN(Number(value)) && value.trim() !== '';
@@ -359,31 +439,55 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
     const createChartData = (records: Record[]) => {
         return records
             .filter(record => isNumeric(record.record_value))
-            .map(record => ({
-                date: new Date(record.created_at),
-                value: parseFloat(record.record_value),
-                result: record.record_result,
-                memo: record.memo,
-                verifiedBy: record.verified_by,
-                approvedBy: record.approved_by,
-                createdAt: record.created_at,
-                recordValue: record.record_value
-            }))
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            .map((record, index) => {
+                const date = new Date(record.created_at);
+                // Create a unique date string that includes time for same-day records
+                const dateStr = date.toLocaleDateString();
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const uniqueDateStr = `${dateStr} ${timeStr}`;
+
+                return {
+                    id: record.id,
+                    date: uniqueDateStr,
+                    timestamp: date.getTime(),
+                    value: parseFloat(record.record_value),
+                    result: record.record_result,
+                    memo: record.memo,
+                    verifiedBy: record.verified_by,
+                    approvedBy: record.approved_by,
+                    createdAt: record.created_at,
+                    recordValue: record.record_value,
+                    // Add unique identifier for each point to prevent overlapping
+                    uniqueId: `${record.id}-${date.getTime()}`
+                };
+            })
+            .sort((a, b) => a.timestamp - b.timestamp);
     };
 
     // Process backend chart data
     const processBackendChartData = (backendData: any[]) => {
-        return backendData.map(item => ({
-            date: new Date(item.date).toLocaleDateString(),
-            value: item.value,
-            result: item.result,
-            memo: item.memo,
-            verifiedBy: item.verified_by,
-            approvedBy: item.approved_by,
-            createdAt: item.date,
-            recordValue: item.value.toString()
-        })).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return backendData.map((item, index) => {
+            const date = new Date(item.date);
+            // Create a unique date string that includes time for same-day records
+            const dateStr = date.toLocaleDateString();
+            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const uniqueDateStr = `${dateStr} ${timeStr}`;
+
+            return {
+                id: item.id || index,
+                date: uniqueDateStr,
+                timestamp: date.getTime(),
+                value: parseFloat(item.value),
+                result: item.result,
+                memo: item.memo,
+                verifiedBy: item.verified_by,
+                approvedBy: item.approved_by,
+                createdAt: item.date,
+                recordValue: item.record_value || item.value.toString(),
+                // Add unique identifier for each point to prevent overlapping
+                uniqueId: `${item.id || index}-${date.getTime()}`
+            };
+        }).sort((a, b) => a.timestamp - b.timestamp);
     };
 
     // Handle date filter changes
@@ -397,14 +501,14 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
     return (
         <DashboardLayout>
             <Head title={`Records for ${asset.name}`} />
-            <Box sx={{ p: 1.5 }}>
+            <Box sx={{ p: { xs: 1, sm: 1.5 } }}>
                 {/* Header */}
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 2, gap: 1 }}>
                     <Box>
-                        <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                             {asset.name}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                             {asset.brand} {asset.model} • {asset.location}
                         </Typography>
                     </Box>
@@ -414,6 +518,10 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                         variant="outlined"
                         startIcon={<ArrowBackIcon />}
                         size="small"
+                        sx={{
+                            alignSelf: { xs: 'stretch', sm: 'flex-start' },
+                            fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
                     >
                         Back
                     </Button>
@@ -431,12 +539,32 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
 
 
                 {/* Date Range Filter */}
-                <Paper elevation={0} sx={{ p: 1.5, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
+                <Paper elevation={1} sx={{
+                    p: { xs: 1.5, sm: 3 },
+                    mb: 3,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider'
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 2
+                    }}>
                         <FilterListIcon color="primary" fontSize="small" />
-                        <Typography variant="subtitle2" fontWeight={600}>Filter Records</Typography>
-                    </Stack>
-                    <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                        <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, fontWeight: 600 }}>
+                            Filter Records by Date
+                        </Typography>
+                    </Box>
+
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fit, minmax(200px, 1fr))' },
+                        gap: { xs: 1.5, sm: 2 },
+                        alignItems: 'end',
+                        mb: 2
+                    }}>
                         <TextField
                             label="From Date"
                             type="date"
@@ -444,7 +572,11 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                             onChange={(e) => handleDateChange(e.target.value, dateTo)}
                             InputLabelProps={{ shrink: true }}
                             size="small"
-                            sx={{ minWidth: 140 }}
+                            fullWidth
+                            sx={{
+                                '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                            }}
                         />
                         <TextField
                             label="To Date"
@@ -453,8 +585,20 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                             onChange={(e) => handleDateChange(dateFrom, e.target.value)}
                             InputLabelProps={{ shrink: true }}
                             size="small"
-                            sx={{ minWidth: 140 }}
+                            fullWidth
+                            sx={{
+                                '& .MuiInputLabel-root': { fontSize: { xs: '0.875rem', sm: '1rem' } },
+                                '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                            }}
                         />
+                    </Box>
+
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr 1fr', sm: 'auto auto' },
+                        gap: 1,
+                        justifyContent: { xs: 'stretch', sm: 'flex-start' }
+                    }}>
                         <Button
                             variant="outlined"
                             onClick={() => {
@@ -464,6 +608,11 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                 handleDateChange(firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]);
                             }}
                             size="small"
+                            sx={{
+                                fontSize: { xs: '0.75rem', sm: '1rem' },
+                                px: { xs: 1, sm: 3 },
+                                py: { xs: 0.75, sm: 1.5 }
+                            }}
                         >
                             This Month
                         </Button>
@@ -476,10 +625,15 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                 handleDateChange(firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]);
                             }}
                             size="small"
+                            sx={{
+                                fontSize: { xs: '0.75rem', sm: '1rem' },
+                                px: { xs: 1, sm: 3 },
+                                py: { xs: 0.75, sm: 1.5 }
+                            }}
                         >
                             Last Month
                         </Button>
-                    </Stack>
+                    </Box>
                 </Paper>
 
                 {/* Records Grouped by Control Type */}
@@ -488,6 +642,11 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                         const { records: controlRecords, activeControl, statistics: controlStatistics, chart: backendChartData, limit_value, limit_options, show_chart, show_statistics } = data;
                         const chartData = show_chart && backendChartData ? processBackendChartData(backendChartData) : createChartData(controlRecords);
                         const hasNumericData = chartData.length > 0;
+
+                        // Debug: Log chart data to console
+                        if (hasNumericData) {
+                            console.log('Chart data for', controlTypeName, ':', chartData);
+                        }
 
                         return (
                             <Accordion
@@ -531,7 +690,7 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                         />
                                     </Stack>
                                 </AccordionSummary>
-                                <AccordionDetails sx={{ p: 0 }}>
+                                <AccordionDetails sx={{ p: 0, overflow: 'visible' }}>
                                     {/* Add Record Form */}
                                     <Box sx={{ p: 2, pb: 1 }}>
                                         <ControlRecordForm
@@ -548,46 +707,46 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                         {/* Statistics */}
                                         {controlStatistics && (
                                             <Grid item xs={12} md={6}>
-                                                <Box sx={{ p: 1.5, borderRight: { md: 1 }, borderColor: 'divider' }}>
+                                                <Box sx={{ p: { xs: 1, sm: 1.5 }, borderRight: { md: 1 }, borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                                                         <BarChartIcon color="primary" fontSize="small" />
-                                                        <Typography variant="subtitle2" fontWeight={600}>Statistics</Typography>
+                                                        <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Statistics</Typography>
                                                     </Stack>
                                                     <Grid container spacing={1}>
                                                         <Grid item xs={4}>
-                                                            <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                                                <Typography variant="caption" color="text.secondary">Count</Typography>
-                                                                <Typography variant="h6" color="primary">{controlStatistics.count}</Typography>
+                                                            <Box sx={{ textAlign: 'center', p: { xs: 0.5, sm: 1 }, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Count</Typography>
+                                                                <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{controlStatistics.count}</Typography>
                                                             </Box>
                                                         </Grid>
                                                         <Grid item xs={4}>
-                                                            <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                                                <Typography variant="caption" color="text.secondary">Mean</Typography>
-                                                                <Typography variant="h6" color="primary">{controlStatistics.mean}</Typography>
+                                                            <Box sx={{ textAlign: 'center', p: { xs: 0.5, sm: 1 }, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Mean</Typography>
+                                                                <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{controlStatistics.mean}</Typography>
                                                             </Box>
                                                         </Grid>
                                                         <Grid item xs={4}>
-                                                            <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                                                <Typography variant="caption" color="text.secondary">Std Dev</Typography>
-                                                                <Typography variant="h6" color="primary">{controlStatistics.sd}</Typography>
+                                                            <Box sx={{ textAlign: 'center', p: { xs: 0.5, sm: 1 }, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Std Dev</Typography>
+                                                                <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{controlStatistics.sd}</Typography>
                                                             </Box>
                                                         </Grid>
                                                         <Grid item xs={4}>
-                                                            <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                                                <Typography variant="caption" color="text.secondary">CV (%)</Typography>
-                                                                <Typography variant="h6" color="primary">{controlStatistics.cv}</Typography>
+                                                            <Box sx={{ textAlign: 'center', p: { xs: 0.5, sm: 1 }, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>CV (%)</Typography>
+                                                                <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{controlStatistics.cv}</Typography>
                                                             </Box>
                                                         </Grid>
                                                         <Grid item xs={4}>
-                                                            <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                                                <Typography variant="caption" color="text.secondary">Min</Typography>
-                                                                <Typography variant="h6" color="primary">{controlStatistics.min}</Typography>
+                                                            <Box sx={{ textAlign: 'center', p: { xs: 0.5, sm: 1 }, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Min</Typography>
+                                                                <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{controlStatistics.min}</Typography>
                                                             </Box>
                                                         </Grid>
                                                         <Grid item xs={4}>
-                                                            <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                                                                <Typography variant="caption" color="text.secondary">Max</Typography>
-                                                                <Typography variant="h6" color="primary">{controlStatistics.max}</Typography>
+                                                            <Box sx={{ textAlign: 'center', p: { xs: 0.5, sm: 1 }, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Max</Typography>
+                                                                <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>{controlStatistics.max}</Typography>
                                                             </Box>
                                                         </Grid>
                                                     </Grid>
@@ -598,41 +757,47 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                         {/* Active Control Details */}
                                         {activeControl && (
                                             <Grid item xs={12} md={6}>
-                                                <Box sx={{ p: 1.5 }}>
+                                                <Box sx={{ p: { xs: 1, sm: 1.5 } }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                                                         <InfoIcon color="primary" fontSize="small" />
-                                                        <Typography variant="subtitle2" fontWeight={600}>Control Details</Typography>
+                                                        <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Control Details</Typography>
                                                     </Stack>
                                                     <Grid container spacing={1}>
                                                         <Grid item xs={6}>
-                                                            <Typography variant="caption" color="text.secondary">Control</Typography>
-                                                            <Typography variant="body2" fontWeight={500}>{activeControl.control_name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Control</Typography>
+                                                            <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{activeControl.control_name}</Typography>
                                                         </Grid>
                                                         <Grid item xs={6}>
-                                                            <Typography variant="caption" color="text.secondary">Brand</Typography>
-                                                            <Typography variant="body2">{activeControl.brand || 'N/A'}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Brand</Typography>
+                                                            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{activeControl.brand || 'N/A'}</Typography>
                                                         </Grid>
                                                         <Grid item xs={6}>
-                                                            <Typography variant="caption" color="text.secondary">Lot</Typography>
-                                                            <Typography variant="body2">{activeControl.lot || 'N/A'}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Lot</Typography>
+                                                            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{activeControl.lot || 'N/A'}</Typography>
                                                         </Grid>
                                                         <Grid item xs={6}>
-                                                            <Typography variant="caption" color="text.secondary">Expiry</Typography>
-                                                            <Typography variant="body2">
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Expiry</Typography>
+                                                            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                                                                 {activeControl.expired ? new Date(activeControl.expired).toLocaleDateString() : 'N/A'}
                                                             </Typography>
                                                         </Grid>
                                                         <Grid item xs={6}>
-                                                            <Typography variant="caption" color="text.secondary">Type</Typography>
-                                                            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{activeControl.limit_type}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Type</Typography>
+                                                            <Typography variant="body2" sx={{ textTransform: 'capitalize', fontSize: { xs: '0.875rem', sm: '1rem' } }}>{activeControl.limit_type}</Typography>
                                                         </Grid>
                                                         <Grid item xs={6}>
-                                                            <Typography variant="caption" color="text.secondary">Limit</Typography>
-                                                            <Typography variant="body2">{limit_value || 'N/A'}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Limit</Typography>
+                                                            <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{limit_value || 'N/A'}</Typography>
                                                         </Grid>
+                                                        {activeControl.limit_type === 'range' && controlStatistics && (
+                                                            <Grid item xs={6}>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Median</Typography>
+                                                                <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>{activeControl.median || 'N/A'}</Typography>
+                                                            </Grid>
+                                                        )}
                                                         {limit_options && limit_options.length > 0 && (
                                                             <Grid item xs={12}>
-                                                                <Typography variant="caption" color="text.secondary">Options</Typography>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Options</Typography>
                                                                 <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
                                                                     {limit_options.map((option, index) => (
                                                                         <Chip key={index} label={option} size="small" variant="outlined" />
@@ -648,10 +813,10 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
 
                                     {/* Chart for numeric data */}
                                     {hasNumericData && (
-                                        <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
+                                        <Box sx={{ p: { xs: 1, sm: 1.5 }, borderTop: 1, borderColor: 'divider' }}>
                                             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                                                 <TrendingUpIcon color="primary" fontSize="small" />
-                                                <Typography variant="subtitle2" fontWeight={600}>Trend Chart</Typography>
+                                                <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Trend Chart</Typography>
                                             </Stack>
                                             <ResponsiveContainer width="100%" height={200}>
                                                 <LineChart data={chartData}>
@@ -662,36 +827,43 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                                         textAnchor="end"
                                                         height={50}
                                                         interval={0}
+                                                        tick={{ fontSize: 12 }}
                                                     />
-                                                    <YAxis />
+                                                    <YAxis tick={{ fontSize: 12 }} />
                                                     <RechartsTooltip
-                                                        formatter={(value: any, name: any, props: any) => {
-                                                            const data = props.payload;
-                                                            return [
-                                                                <div>
-                                                                    <div><strong>Value:</strong> {data.recordValue}</div>
-                                                                    <div><strong>Result:</strong> {data.result || 'N/A'}</div>
-                                                                    <div><strong>Verified By:</strong> {data.verifiedBy || 'N/A'}</div>
-                                                                    {data.memo && <div><strong>Memo:</strong> {data.memo}</div>}
-                                                                </div>,
-                                                                'Record Details'
-                                                            ];
-                                                        }}
-                                                        labelFormatter={(label) => `Date: ${label}`}
-                                                        contentStyle={{
-                                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                            padding: '8px'
+                                                        content={({ active, payload, label }: any) => {
+                                                            if (active && payload && payload.length) {
+                                                                const data = payload[0].payload;
+                                                                return (
+                                                                    <div style={{
+                                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                                        border: '1px solid #ccc',
+                                                                        borderRadius: '4px',
+                                                                        padding: '8px',
+                                                                        fontSize: '12px',
+                                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                                                    }}>
+                                                                        <div><strong>Date:</strong> {data.date}</div>
+                                                                        <div><strong>Time:</strong> {new Date(data.createdAt).toLocaleTimeString()}</div>
+                                                                        <div><strong>Value:</strong> {data.recordValue}</div>
+                                                                        <div><strong>Result:</strong> {data.result || 'N/A'}</div>
+                                                                        <div><strong>Verified By:</strong> {data.verifiedBy || 'N/A'}</div>
+                                                                        {data.memo && <div><strong>Memo:</strong> {data.memo}</div>}
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
                                                         }}
                                                     />
                                                     <Line
+                                                        key={`line-${controlTypeName}`}
                                                         type="monotone"
                                                         dataKey="value"
                                                         stroke="#8884d8"
                                                         strokeWidth={2}
                                                         dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
-                                                        activeDot={{ r: 6 }}
+                                                        activeDot={{ r: 6, stroke: '#8884d8', strokeWidth: 2 }}
+                                                        connectNulls={false}
                                                     />
                                                 </LineChart>
                                             </ResponsiveContainer>
@@ -699,109 +871,165 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                     )}
 
                                     {/* Records Table */}
-                                    <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
-                                        <DataGrid
-                                            autoHeight
-                                            rows={controlRecords.map((r: Record) => {
-                                                const status = r.approved_by ? 'Approved by ' + r.approved_by : (r.verified_by ? 'Verified by ' + r.verified_by : 'Draft - Not Verified');
-                                                const statusColor = r.approved_by ? 'success' : (r.verified_by ? 'warning' : 'default');
+                                    <Box sx={{ p: { xs: 1, sm: 1.5 }, borderTop: 1, borderColor: 'divider', overflow: 'visible' }}>
+                                        <Box sx={{
+                                            minHeight: { xs: 300, sm: 400 },
+                                            maxHeight: { xs: 500, sm: 600 },
+                                            width: '100%',
+                                            overflow: 'auto',
+                                            '& .MuiDataGrid-root': {
+                                                overflow: 'visible'
+                                            }
+                                        }}>
+                                            <DataGrid
+                                                autoHeight
+                                                rows={controlRecords.map((r: Record) => {
+                                                    const status = r.approved_by ? 'Approved by ' + r.approved_by : (r.verified_by ? 'Verified by ' + r.verified_by : 'Draft - Not Verified');
+                                                    const statusColor = r.approved_by ? 'success' : (r.verified_by ? 'warning' : 'default');
 
-                                                return {
-                                                    id: r.id,
-                                                    recordValue: r.record_value,
-                                                    recordResult: r.record_result || '-',
-                                                    verifiedBy: r.verified_by || '-',
-                                                    approvedBy: r.approved_by || '-',
-                                                    status: status,
-                                                    statusColor: statusColor,
-                                                    memo: r.memo || '-',
-                                                    createdAt: r.created_at ? new Date(r.created_at).toISOString().replace('T', ' ').substring(0, 19) : '-',
-                                                    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString().replace('T', ' ').substring(0, 19) : '-',
-                                                };
-                                            })}
-                                            columns={[
-                                                { field: 'recordValue', headerName: 'Value', flex: 0.6, minWidth: 100 },
-                                                {
-                                                    field: 'recordResult',
-                                                    headerName: 'Result',
-                                                    flex: 0.5,
-                                                    minWidth: 80,
-                                                    renderCell: (params) => {
-                                                        const result = params.row.recordResult;
-                                                        if (result === 'PASS') {
-                                                            return <Chip label="PASS" color="success" size="small" />;
-                                                        } else if (result === 'FAIL') {
-                                                            return <Chip label="FAIL" color="error" size="small" />;
-                                                        } else {
-                                                            return <span>{result}</span>;
+                                                    return {
+                                                        id: r.id,
+                                                        recordValue: r.record_value,
+                                                        recordResult: r.record_result || '-',
+                                                        verifiedBy: r.verified_by || '-',
+                                                        approvedBy: r.approved_by || '-',
+                                                        status: status,
+                                                        statusColor: statusColor,
+                                                        memo: r.memo || '-',
+                                                        createdAt: r.created_at ? (() => {
+                                                            const date = new Date(r.created_at);
+                                                            // Convert to Bangkok timezone for display
+                                                            const bangkokOffset = 7 * 60; // Bangkok is UTC+7
+                                                            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+                                                            const bangkokTime = new Date(utc + (bangkokOffset * 60000));
+
+                                                            const year = bangkokTime.getFullYear();
+                                                            const month = String(bangkokTime.getMonth() + 1).padStart(2, '0');
+                                                            const day = String(bangkokTime.getDate()).padStart(2, '0');
+                                                            const hours = String(bangkokTime.getHours()).padStart(2, '0');
+                                                            const minutes = String(bangkokTime.getMinutes()).padStart(2, '0');
+
+                                                            return `${day}/${month}/${year} ${hours}:${minutes}`;
+                                                        })() : '-',
+                                                        updatedAt: r.updated_at ? (() => {
+                                                            const date = new Date(r.updated_at);
+                                                            // Convert to Bangkok timezone for display
+                                                            const bangkokOffset = 7 * 60; // Bangkok is UTC+7
+                                                            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+                                                            const bangkokTime = new Date(utc + (bangkokOffset * 60000));
+
+                                                            const year = bangkokTime.getFullYear();
+                                                            const month = String(bangkokTime.getMonth() + 1).padStart(2, '0');
+                                                            const day = String(bangkokTime.getDate()).padStart(2, '0');
+                                                            const hours = String(bangkokTime.getHours()).padStart(2, '0');
+                                                            const minutes = String(bangkokTime.getMinutes()).padStart(2, '0');
+
+                                                            return `${day}/${month}/${year} ${hours}:${minutes}`;
+                                                        })() : '-',
+                                                    };
+                                                })}
+                                                columns={[
+                                                    { field: 'recordValue', headerName: 'Value', flex: 0.6, minWidth: 80 },
+                                                    ...(activeControl.limit_type === 'range' ? [{
+                                                        field: 'recordResult',
+                                                        headerName: 'Result',
+                                                        flex: 0.5,
+                                                        minWidth: 70,
+                                                        renderCell: (params: any) => {
+                                                            const result = params.row.recordResult;
+                                                            if (result === 'PASS') {
+                                                                return <Chip label="PASS" color="success" size="small" />;
+                                                            } else if (result === 'FAIL') {
+                                                                return <Chip label="FAIL" color="error" size="small" />;
+                                                            } else {
+                                                                return <span>{result}</span>;
+                                                            }
                                                         }
-                                                    }
-                                                },
-                                                { field: 'verifiedBy', headerName: 'Verified By', flex: 0.7, minWidth: 100 },
-                                                {
-                                                    field: 'approvedBy',
-                                                    headerName: 'Approved By',
-                                                    flex: 0.7,
-                                                    minWidth: 100,
-                                                    renderCell: (params) => {
-                                                        const approvedBy = params.row.approvedBy;
-                                                        if (approvedBy === '-') {
-                                                            return <Chip label="Not Approved" color="default" size="small" variant="outlined" />;
-                                                        } else {
-                                                            return <Chip label={approvedBy} color="success" size="small" />;
+                                                    } as GridColDef] : []),
+                                                    { field: 'verifiedBy', headerName: 'Verified By', flex: 0.7, minWidth: 90 },
+                                                    {
+                                                        field: 'approvedBy',
+                                                        headerName: 'Approved By',
+                                                        flex: 0.7,
+                                                        minWidth: 90,
+                                                        renderCell: (params: any) => {
+                                                            const approvedBy = params.row.approvedBy;
+                                                            if (approvedBy === '-') {
+                                                                return <Chip label="Not Approved" color="default" size="small" variant="outlined" />;
+                                                            } else {
+                                                                return <Chip label={approvedBy} color="success" size="small" />;
+                                                            }
                                                         }
-                                                    }
-                                                },
-                                                { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 120 },
-                                                { field: 'createdAt', headerName: 'Created', flex: 0.7, minWidth: 120 },
-                                                {
-                                                    field: 'actions',
-                                                    headerName: 'Actions',
-                                                    width: 120,
-                                                    sortable: false,
-                                                    filterable: false,
-                                                    renderCell: (params) => {
-                                                        return (
-                                                            <Stack direction="row" spacing={0.5}>
-                                                                {params.row.approvedBy === '-' && (
+                                                    },
+                                                    { field: 'memo', headerName: 'Memo', flex: 1, minWidth: 100 },
+                                                    { field: 'createdAt', headerName: 'Created', flex: 0.7, minWidth: 100 },
+                                                    {
+                                                        field: 'actions',
+                                                        headerName: 'Actions',
+                                                        width: 100,
+                                                        sortable: false,
+                                                        filterable: false,
+                                                        renderCell: (params: any) => {
+                                                            return (
+                                                                <Stack direction="row" spacing={0.5}>
+                                                                    {params.row.approvedBy === '-' && (
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            color="success"
+                                                                            onClick={() => handleAction(params.row.id, 'approve')}
+                                                                            title="Approve Record"
+                                                                        >
+                                                                            <CheckCircleIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                    )}
                                                                     <IconButton
                                                                         size="small"
-                                                                        color="success"
-                                                                        onClick={() => handleAction(params.row.id, 'approve')}
-                                                                        title="Approve Record"
+                                                                        color="error"
+                                                                        onClick={() => handleDeleteRecord(params.row.id)}
+                                                                        title="Delete Record"
                                                                     >
-                                                                        <CheckCircleIcon fontSize="small" />
+                                                                        <DeleteIcon fontSize="small" />
                                                                     </IconButton>
-                                                                )}
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => handleDeleteRecord(params.row.id)}
-                                                                    title="Delete Record"
-                                                                >
-                                                                    <DeleteIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Stack>
-                                                        );
+                                                                </Stack>
+                                                            );
+                                                        }
                                                     }
-                                                }
-                                            ] as GridColDef[]}
-                                            pageSizeOptions={[10, 25, 50]}
-                                            initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
-                                            disableRowSelectionOnClick
-                                            disableColumnMenu
-                                            hideFooterSelectedRowCount
-                                            sx={{
-                                                '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden' },
-                                                '& .MuiDataGrid-cell': { py: 0.5 },
-                                                border: 'none',
-                                                '& .MuiDataGrid-columnHeaders': {
-                                                    backgroundColor: 'background.paper',
-                                                    borderBottom: '1px solid',
-                                                    borderColor: 'divider'
-                                                }
-                                            }}
-                                        />
+                                                ] as GridColDef[]}
+                                                pageSizeOptions={[5, 10, 25]}
+                                                initialState={{ pagination: { paginationModel: { pageSize: 5, page: 0 } } }}
+                                                disableRowSelectionOnClick
+                                                disableColumnMenu
+                                                hideFooterSelectedRowCount
+                                                sx={{
+                                                    '& .MuiDataGrid-virtualScroller': {
+                                                        overflowX: 'auto',
+                                                        overflowY: 'auto'
+                                                    },
+                                                    '& .MuiDataGrid-cell': {
+                                                        py: 0.5,
+                                                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                                    },
+                                                    '& .MuiDataGrid-columnHeaders': {
+                                                        backgroundColor: 'background.paper',
+                                                        borderBottom: '1px solid',
+                                                        borderColor: 'divider',
+                                                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                                    },
+                                                    '& .MuiDataGrid-main': {
+                                                        overflow: 'auto'
+                                                    },
+                                                    '& .MuiDataGrid-root': {
+                                                        overflow: 'auto'
+                                                    },
+                                                    '& .MuiDataGrid-virtualScrollerContent': {
+                                                        overflow: 'auto'
+                                                    },
+                                                    '& .MuiDataGrid-virtualScrollerRenderZone': {
+                                                        overflow: 'visible'
+                                                    }
+                                                }}
+                                            />
+                                        </Box>
                                     </Box>
                                 </AccordionDetails>
                             </Accordion>
@@ -810,23 +1038,38 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                 </Stack>
 
                 {/* Confirmation Dialog */}
-                <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="sm">
-                    <DialogTitle>
+                <Dialog
+                    open={confirmOpen}
+                    onClose={() => setConfirmOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                    sx={{
+                        '& .MuiDialog-paper': {
+                            margin: { xs: 2, sm: 'auto' },
+                            width: { xs: 'calc(100% - 32px)', sm: 'auto' }
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
                         {actionType === 'approve' ? 'Approve Record' : 'Delete Record'}
                     </DialogTitle>
                     <DialogContent>
                         {actionType === 'approve' && (
                             <>
-                                Are you sure you want to approve this record?
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                    Are you sure you want to approve this record?
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                                     This will stamp the record with your approval.
                                 </Typography>
                             </>
                         )}
                         {actionType === 'delete' && (
                             <>
-                                Are you sure you want to delete this record?
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                    Are you sure you want to delete this record?
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                                     This action cannot be undone. The record will be permanently removed.
                                 </Typography>
                                 <TextField
@@ -837,13 +1080,20 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                     placeholder="Enter the reason for deleting this record..."
                                     value={deleteMemo}
                                     onChange={(e) => setDeleteMemo(e.target.value)}
-                                    sx={{ mt: 2 }}
+                                    sx={{
+                                        mt: 2,
+                                        '& .MuiInputBase-input': { fontSize: { xs: '0.875rem', sm: '1rem' } }
+                                    }}
                                 />
                             </>
                         )}
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setConfirmOpen(false)} disabled={isDeleting}>
+                    <DialogActions sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Button
+                            onClick={() => setConfirmOpen(false)}
+                            disabled={isDeleting}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
                             Cancel
                         </Button>
                         <Button
@@ -852,6 +1102,7 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                             onClick={confirmAction}
                             disabled={isDeleting}
                             startIcon={isDeleting ? <Box sx={{ width: 16, height: 16, border: '2px solid #fff', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> : undefined}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
                         >
                             {isDeleting ? 'Deleting...' : (actionType === 'approve' ? 'Approve' : 'Delete')}
                         </Button>
