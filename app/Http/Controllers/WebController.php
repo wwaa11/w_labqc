@@ -19,6 +19,10 @@ class WebController extends Controller
     {
         $userLocation = auth()->user()->location;
 
+        if (auth()->user()->role == 'admin' || auth()->user()->role == 'superadmin') {
+            $userLocation = 'all';
+        }
+
         $assets     = $this->getUserAssets($userLocation);
         $assetDatas = $this->buildAssetData($assets);
 
@@ -32,6 +36,12 @@ class WebController extends Controller
      */
     private function getUserAssets(string $userLocation)
     {
+        if ($userLocation == 'all') {
+            return Asset::query()
+                ->where('is_deleted', false)
+                ->get();
+        }
+
         return Asset::query()
             ->where('location', $userLocation)
             ->where('is_deleted', false)
@@ -1001,6 +1011,11 @@ class WebController extends Controller
         $record->save();
 
         return redirect()->route('records.byAsset', $assetId)->with('success', 'Record deleted successfully.');
+    }
+
+    public function UserGuide()
+    {
+        return inertia('documents/guide');
     }
 
 }

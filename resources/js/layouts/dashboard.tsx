@@ -20,6 +20,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import HelpIcon from '@mui/icons-material/Help';
 import { useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -179,7 +180,7 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [drawerOpen, setDrawerOpen] = React.useState(false);
-    const [mini, setMini] = React.useState(true); // collapsed by default on desktop
+    const [mini, setMini] = React.useState(false); // expanded by default on desktop
     const [flashOpen, setFlashOpen] = React.useState(false);
     const flashMessage: string = (flash?.success as string) || (flash?.error as string) || '';
     const flashSeverity: 'success' | 'error' = flash?.error ? 'error' : 'success';
@@ -198,24 +199,27 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
     const navItems = isSuperAdmin
         ? [
             { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
-            { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
+            { label: 'Approve Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
             { label: 'Assets Overview', route: route('assets.overview'), name: 'assets.overview', icon: <LocationOnIcon /> },
-            { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
-            { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
-            { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
+            { label: 'Assets Management', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
+            { label: 'Controls Management', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
+            { label: 'Roles & Location', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
             { label: 'Asset Types', route: route('asset-types.main'), name: 'asset-types.main', icon: <CategoryIcon /> },
             { label: 'Control Types', route: route('control-types.main'), name: 'control-types.main', icon: <TuneIcon /> },
+            { label: 'User Guide', route: route('users.guide'), name: 'users.guide', icon: <HelpIcon /> },
         ]
         : isAdmin
             ? [
-                { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
+                { label: 'Approve Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
                 { label: 'Assets Overview', route: route('assets.overview'), name: 'assets.overview', icon: <LocationOnIcon /> },
-                { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
-                { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
-                { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
+                { label: 'Assets Management', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
+                { label: 'Controls Management', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
+                { label: 'Roles & Location', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
+                { label: 'User Guide', route: route('users.guide'), name: 'users.guide', icon: <HelpIcon /> },
             ]
             : [
                 { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
+                { label: 'User Guide', route: route('users.guide'), name: 'users.guide', icon: <HelpIcon /> },
             ];
 
     // Helper to check if a route is active by route name

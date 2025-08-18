@@ -23,6 +23,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('users')->as('users.')->controller(WebController::class)->group(function () {
         Route::get('dashboard', 'UserAssets')->name('dashboard');
         Route::post('records/store', 'RecordsStore')->name('records.store');
+        Route::get('guide', 'UserGuide')->name('guide');
     });
 
     // SuperAdmin-only management areas (Asset Types & Control Types)
