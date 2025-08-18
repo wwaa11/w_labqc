@@ -1,9 +1,12 @@
 import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem, Autocomplete, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { useState } from 'react';
 
 export default function AssetsCreate() {
-    const { assetTypes, errors } = usePage().props as any;
+    const { assetTypes, locations, errors } = usePage().props as any;
+    const [locationInput, setLocationInput] = useState('');
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const { data, setData, post, processing } = useForm({
         asset_type_id: '',
         name: '',
@@ -16,7 +19,15 @@ export default function AssetsCreate() {
         memo: '',
     });
 
-    const onSubmit = (e: React.FormEvent) => { e.preventDefault(); post(route('assets.store')); };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setConfirmOpen(true);
+    };
+
+    const confirmSubmit = () => {
+        setConfirmOpen(false);
+        post(route('assets.store'));
+    };
 
     const onChangeAssetType = (e: any) => {
         const value = e.target.value;
@@ -36,7 +47,7 @@ export default function AssetsCreate() {
                     <Typography variant="body1" color="text.secondary">Add a new asset</Typography>
                 </Box>
                 <Paper sx={{ p: { xs: 2, md: 3 } }}>
-                    <form onSubmit={onSubmit}>
+                    <form onSubmit={handleSubmit}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth error={!!errors?.asset_type_id}>
@@ -66,7 +77,28 @@ export default function AssetsCreate() {
                                 <TextField fullWidth label="Serial Number" value={data.serial_number} onChange={(e) => setData('serial_number', e.target.value)} />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <TextField fullWidth label="Location" value={data.location} onChange={(e) => setData('location', e.target.value)} />
+                                <Autocomplete
+                                    freeSolo
+                                    options={(locations || []).filter((loc: any) => loc && typeof loc === 'string')}
+                                    inputValue={locationInput}
+                                    onInputChange={(event, newInputValue: string) => {
+                                        setLocationInput(newInputValue || '');
+                                        setData('location', newInputValue || '');
+                                    }}
+                                    onChange={(event, newValue) => {
+                                        setData('location', typeof newValue === 'string' ? newValue : '');
+                                        setLocationInput(typeof newValue === 'string' ? newValue : '');
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Location"
+                                            fullWidth
+                                            error={!!errors?.location}
+                                            helperText={errors?.location}
+                                        />
+                                    )}
+                                />
                             </Grid>
                             <Grid item xs={12}>
                                 <TextField fullWidth label="Memo" value={data.memo} onChange={(e) => setData('memo', e.target.value)} multiline minRows={3} />
@@ -81,6 +113,32 @@ export default function AssetsCreate() {
                     </form>
                 </Paper>
             </Box>
+
+            {/* Confirmation Dialog */}
+            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Confirm Asset Creation</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                        Are you sure you want to create this asset?
+                    </Typography>
+                    <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Asset Details:</Typography>
+                        <Typography variant="body2"><strong>Name:</strong> {data.name || 'N/A'}</Typography>
+                        <Typography variant="body2"><strong>Type:</strong> {assetTypes.find((at: any) => String(at.id) === String(data.asset_type_id))?.asset_type_name || 'N/A'}</Typography>
+                        <Typography variant="body2"><strong>Location:</strong> {data.location || 'N/A'}</Typography>
+                        <Typography variant="body2"><strong>Brand:</strong> {data.brand || 'N/A'}</Typography>
+                        <Typography variant="body2"><strong>Model:</strong> {data.model || 'N/A'}</Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmOpen(false)} disabled={processing}>
+                        Cancel
+                    </Button>
+                    <Button onClick={confirmSubmit} variant="contained" disabled={processing}>
+                        {processing ? 'Creating...' : 'Create Asset'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </DashboardLayout>
     );
 }

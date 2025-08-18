@@ -670,8 +670,15 @@ class WebController extends Controller
 
     public function AssetsCreate()
     {
-        $assetTypes = AssetType::notDeleted()->get(['id', 'asset_type_name']);
-        return inertia('assets/create', compact('assetTypes'));
+        $assetTypes   = AssetType::notDeleted()->get(['id', 'asset_type_name']);
+        $getlocations = Asset::groupBy('location')->select('location')->whereNotNull('location')->where('location', '!=', '')->where('is_deleted', false)->get();
+        $locations    = [];
+        foreach ($getlocations as $location) {
+            if (! empty($location->location)) {
+                $locations[] = $location->location;
+            }
+        }
+        return inertia('assets/create', compact('assetTypes', 'locations'));
     }
 
     public function AssetsStore(Request $request)
@@ -694,9 +701,16 @@ class WebController extends Controller
 
     public function AssetsEdit($id)
     {
-        $asset      = Asset::findOrFail($id);
-        $assetTypes = AssetType::notDeleted()->get(['id', 'asset_type_name']);
-        return inertia('assets/edit', compact('asset', 'assetTypes'));
+        $asset        = Asset::findOrFail($id);
+        $assetTypes   = AssetType::notDeleted()->get(['id', 'asset_type_name']);
+        $getlocations = Asset::groupBy('location')->select('location')->whereNotNull('location')->where('location', '!=', '')->where('is_deleted', false)->get();
+        $locations    = [];
+        foreach ($getlocations as $location) {
+            if (! empty($location->location)) {
+                $locations[] = $location->location;
+            }
+        }
+        return inertia('assets/edit', compact('asset', 'assetTypes', 'locations'));
     }
 
     public function AssetsUpdate(Request $request, $id)

@@ -360,7 +360,7 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
         return records
             .filter(record => isNumeric(record.record_value))
             .map(record => ({
-                date: new Date(record.created_at).toLocaleDateString(),
+                date: new Date(record.created_at),
                 value: parseFloat(record.record_value),
                 result: record.record_result,
                 memo: record.memo,
@@ -715,8 +715,8 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                                     status: status,
                                                     statusColor: statusColor,
                                                     memo: r.memo || '-',
-                                                    createdAt: r.created_at ? new Date(r.created_at).toLocaleString() : '-',
-                                                    updatedAt: r.updated_at ? new Date(r.updated_at).toLocaleString() : '-',
+                                                    createdAt: r.created_at ? new Date(r.created_at).toISOString().replace('T', ' ').substring(0, 19) : '-',
+                                                    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString().replace('T', ' ').substring(0, 19) : '-',
                                                 };
                                             })}
                                             columns={[

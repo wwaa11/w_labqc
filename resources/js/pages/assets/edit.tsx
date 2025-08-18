@@ -1,9 +1,11 @@
 import { usePage, useForm, router, Head } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Paper, Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem, Autocomplete } from '@mui/material';
+import { useState } from 'react';
 
 export default function AssetsEdit() {
-    const { asset, assetTypes, errors } = usePage().props as any;
+    const { asset, assetTypes, locations, errors } = usePage().props as any;
+    const [locationInput, setLocationInput] = useState(asset?.location || '');
     const { data, setData, post, processing } = useForm({
         asset_type_id: asset?.asset_type_id?.toString() || '',
         name: asset?.name || '',
@@ -56,7 +58,28 @@ export default function AssetsEdit() {
                                 <TextField fullWidth label="Serial Number" value={data.serial_number} onChange={(e) => setData('serial_number', e.target.value)} />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <TextField fullWidth label="Location" value={data.location} onChange={(e) => setData('location', e.target.value)} />
+                                <Autocomplete
+                                    freeSolo
+                                    options={(locations || []).filter((loc: any) => loc && typeof loc === 'string')}
+                                    inputValue={locationInput}
+                                    onInputChange={(event, newInputValue: string) => {
+                                        setLocationInput(newInputValue || '');
+                                        setData('location', newInputValue || '');
+                                    }}
+                                    onChange={(event, newValue) => {
+                                        setData('location', newValue || '');
+                                        setLocationInput(newValue || '');
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Location"
+                                            fullWidth
+                                            error={!!errors?.location}
+                                            helperText={errors?.location}
+                                        />
+                                    )}
+                                />
                             </Grid>
                             <Grid item xs={12}>
                                 <TextField fullWidth label="Memo" value={data.memo} onChange={(e) => setData('memo', e.target.value)} multiline minRows={3} />
