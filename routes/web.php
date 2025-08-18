@@ -85,6 +85,9 @@ Route::middleware(['auth'])->group(function () {
         // Records Management Routes (Admin & SuperAdmin)
         Route::prefix('records')->as('records.')->controller(WebController::class)->group(function () {
             Route::get('main', 'RecordsMain')->name('main');
+            Route::get('asset/{assetId}', 'RecordsByAsset')->name('byAsset');
+            Route::post('asset/{assetId}/store', 'RecordsByAssetStore')->name('byAsset.store');
+            Route::delete('asset/{assetId}/destroy/{recordId}', 'RecordsByAssetDestroy')->name('byAsset.destroy');
             Route::post('approve/{id}', 'RecordsApprove')->name('approve');
             Route::delete('remove/{id}', 'RecordsRemove')->name('remove');
             Route::post('restore/{id}', 'RecordsRestore')->name('restore');

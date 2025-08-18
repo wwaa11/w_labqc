@@ -294,10 +294,10 @@ export default function AssetsOverview({ assetsByLocation, search, totalAssets, 
                                                         <TableCell>{asset.environment || 'N/A'}</TableCell>
                                                         <TableCell>
                                                             <Box display="flex" gap={1}>
-                                                                <Tooltip title="View Details">
+                                                                <Tooltip title="View Records">
                                                                     <IconButton
                                                                         component={Link}
-                                                                        href={route('assets.edit', asset.id)}
+                                                                        href={route('records.byAsset', asset.id)}
                                                                         size="small"
                                                                         color="primary"
                                                                     >

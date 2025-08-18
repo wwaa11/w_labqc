@@ -9,8 +9,10 @@ class Record extends Model
     use HasFactory;
 
     protected $fillable = [
+        'asset_id',
         'control_type_id',
         'record_value',
+        'record_result',
         'verified_by',
         'approved_by',
         'memo',

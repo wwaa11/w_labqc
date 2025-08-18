@@ -813,4 +813,180 @@ class WebController extends Controller
         return redirect()->route('records.main')->with('success', 'Record restored successfully.');
     }
 
+    public function RecordsByAsset(Request $request, $assetId)
+    {
+        $asset = Asset::findOrFail($assetId);
+
+        // Get date filter parameters
+        $dateFrom = $request->get('date_from', function () {
+            $now = new \DateTime();
+            return $now->format('Y-m-01'); // First day of current month
+        });
+
+        $dateTo = $request->get('date_to', function () {
+            $now = new \DateTime();
+            return $now->format('Y-m-t'); // Last day of current month
+        });
+
+        $allControls = ControlType::where('asset_type_id', $asset->asset_type_id)->where('is_deleted', false)->get();
+        $datas       = [];
+        foreach ($allControls as $control) {
+            $datas[$control->control_type_name] = [
+                'control_type_id' => $control->id,
+                'activeControl'   => Control::where('control_type_id', $control->id)->where('is_active', true)->first(),
+                'limit_type'      => $control->limit_type,
+                'show_chart'      => true, // Show chart for all controls with numeric data
+                'show_statistics' => true, // Show statistics for all controls with numeric data
+            ];
+        }
+
+        // Get records with date filtering
+        $records = Record::with(['controlType.assetType'])
+            ->where('asset_id', $assetId)
+            ->where('is_deleted', false)
+            ->when($dateFrom, function ($query, $dateFrom) {
+                return $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($query, $dateTo) {
+                return $query->whereDate('created_at', '<=', $dateTo);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Initialize records array for each control type
+        foreach ($datas as $controlTypeName => &$data) {
+            $data['records'] = [];
+        }
+
+        // Group records by control type
+        foreach ($records as $record) {
+            $controlTypeName = $record->controlType->control_type_name;
+            if (isset($datas[$controlTypeName])) {
+                $datas[$controlTypeName]['records'][] = $record;
+            }
+        }
+
+        foreach ($datas as $controlTypeName => &$data) {
+            if ($data['activeControl'] === null) {
+                continue;
+            }
+            // Generate statistics if there are records
+            if (! empty($data['records'])) {
+                $data['statistics'] = $this->getStatistics($data['records']);
+            }
+            // Generate chart data if there are records
+            if (! empty($data['records'])) {
+                $data['chart'] = $this->getChart($data['records']);
+            }
+            $data['limit_value']   = $this->getLimitValue($data['activeControl']);
+            $data['limit_options'] = $this->getLimitOptions($data['activeControl']);
+        }
+        // Sort the data by control type name
+        ksort($datas);
+
+        return inertia('records/byAsset', compact('datas', 'asset', 'dateFrom', 'dateTo'));
+    }
+
+    private function getChart($records)
+    {
+        $chartData = [];
+        foreach ($records as $record) {
+            if (is_numeric($record->record_value)) {
+                $chartData[] = [
+                    'date'        => $record->created_at,
+                    'value'       => (float) $record->record_value,
+                    'result'      => $record->record_result,
+                    'memo'        => $record->memo,
+                    'verified_by' => $record->verified_by,
+                    'approved_by' => $record->approved_by,
+                ];
+            }
+        }
+        return $chartData;
+    }
+
+    private function getStatistics($records)
+    {
+        // Extract numeric values from Record objects that are approved
+        $values = [];
+        foreach ($records as $record) {
+            // Only include records that have been approved (approved_by is not null)
+            if ($record->approved_by !== null && $record->is_deleted === false) {
+                $value = is_numeric($record->record_value) ? (float) $record->record_value : null;
+                if ($value !== null) {
+                    $values[] = $value;
+                }
+            }
+        }
+
+        // Return empty statistics if no valid numeric values
+        if (empty($values)) {
+            return [
+                'count' => 0,
+                'mean'  => '0.00',
+                'sd'    => '0.00',
+                'cv'    => '0.00',
+                'min'   => '0.00',
+                'max'   => '0.00',
+            ];
+        }
+
+        $statistics          = [];
+        $statistics['count'] = count($values);
+        $statistics['mean']  = number_format(array_sum($values) / count($values), 2);
+
+        // Calculate standard deviation
+        $variance = array_sum(array_map(function ($value) use ($statistics) {
+            return pow($value - (float) $statistics['mean'], 2);
+        }, $values)) / count($values);
+        $statistics['sd'] = number_format(sqrt($variance), 2);
+
+        // Calculate coefficient of variation (avoid division by zero)
+        $meanValue         = (float) $statistics['mean'];
+        $sdValue           = (float) $statistics['sd'];
+        $statistics['cv']  = $meanValue != 0 ? number_format(($sdValue / $meanValue) * 100, 2) : '0.00';
+        $statistics['min'] = number_format(min($values), 2);
+        $statistics['max'] = number_format(max($values), 2);
+
+        return $statistics;
+    }
+
+    public function RecordsByAssetStore(Request $request, $assetId)
+    {
+        $validated = $request->validate([
+            'control_type_id' => 'required|exists:control_types,id',
+            'record_value'    => 'required|string|max:255',
+            'record_result'   => 'nullable|string|max:255',
+            'memo'            => 'nullable|string|max:1000',
+            'created_at'      => 'required|date_format:Y-m-d H:i:s',
+        ]);
+
+        $record                  = new Record();
+        $record->asset_id        = $assetId;
+        $record->control_type_id = $validated['control_type_id'];
+        $record->record_value    = $validated['record_value'];
+        $record->record_result   = $validated['record_result'] ?? null;
+        $record->memo            = $validated['memo'] ?? null;
+        $record->verified_by     = auth()->user()->user_id ?? 'Admin';
+        $record->approved_by     = auth()->user()->name ?? auth()->user()->user_id ?? 'Admin';
+        $record->created_at      = $validated['created_at'];
+        $record->updated_at      = $validated['created_at'];
+        $record->save();
+
+        return redirect()->route('records.byAsset', $assetId)->with('success', 'Record added successfully!');
+    }
+
+    public function RecordsByAssetDestroy(Request $request, $assetId, $recordId)
+    {
+        $record = Record::where('asset_id', $assetId)
+            ->where('id', $recordId)
+            ->firstOrFail();
+
+        $record->is_deleted = true;
+        $record->memo       = $request->get('memo', 'Deleted via asset records page');
+        $record->save();
+
+        return redirect()->route('records.byAsset', $assetId)->with('success', 'Record deleted successfully.');
+    }
+
 }
