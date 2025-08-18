@@ -7,6 +7,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { useMemo, FC, ReactNode, FormEvent } from 'react';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -18,6 +19,7 @@ import CategoryIcon from '@mui/icons-material/Category';
 import TuneIcon from '@mui/icons-material/Tune';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -73,11 +75,57 @@ const UserInfo: FC<{ name: string; avatar?: string; position?: string; departmen
 import { useAppearance } from '@/hooks/use-appearance';
 const ThemeToggle: FC = () => {
     const { appearance, toggleAppearance } = useAppearance();
-    const icon = appearance === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />;
-    const label = appearance === 'dark' ? 'Light mode' : 'Dark mode';
+
+    // Use a state to force re-render when appearance changes
+    const [currentAppearance, setCurrentAppearance] = React.useState(appearance);
+
+    // Update local state when appearance changes
+    React.useEffect(() => {
+        setCurrentAppearance(appearance);
+    }, [appearance]);
+
+    const handleToggle = React.useCallback(() => {
+        // Immediately update local state for instant icon change
+        setCurrentAppearance(prev => {
+            // Match the hook's toggle logic: system -> light -> dark -> system
+            const next = prev === 'system' ? 'light' : prev === 'light' ? 'dark' : 'system';
+            return next;
+        });
+        // Then update the global state
+        toggleAppearance();
+    }, [toggleAppearance]);
+
+    // Get icon and label based on current appearance state
+    const getIconAndLabel = (appearance: string) => {
+        switch (appearance) {
+            case 'system':
+                return {
+                    icon: <SettingsBrightnessIcon />,
+                    label: 'System mode'
+                };
+            case 'light':
+                return {
+                    icon: <Brightness4Icon />,
+                    label: 'Dark mode'
+                };
+            case 'dark':
+                return {
+                    icon: <Brightness7Icon />,
+                    label: 'System mode'
+                };
+            default:
+                return {
+                    icon: <SettingsBrightnessIcon />,
+                    label: 'System mode'
+                };
+        }
+    };
+
+    const { icon, label } = getIconAndLabel(currentAppearance);
+
     return (
         <Tooltip title={`Toggle theme (${label})`}>
-            <IconButton onClick={toggleAppearance} aria-label="Toggle theme">
+            <IconButton onClick={handleToggle} aria-label="Toggle theme">
                 {icon}
             </IconButton>
         </Tooltip>
@@ -151,6 +199,7 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
         ? [
             { label: 'My Assets', route: route('users.dashboard'), name: 'users.dashboard', icon: <DashboardIcon /> },
             { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
+            { label: 'Assets Overview', route: route('assets.overview'), name: 'assets.overview', icon: <LocationOnIcon /> },
             { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
             { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
             { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
@@ -159,10 +208,10 @@ const DashboardLayout: FC<{ children: ReactNode }> = ({ children }) => {
         ]
         : isAdmin
             ? [
+                { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
+                { label: 'Assets Overview', route: route('assets.overview'), name: 'assets.overview', icon: <LocationOnIcon /> },
                 { label: 'Assets', route: route('assets.main'), name: 'assets.main', icon: <Inventory2Icon /> },
-                { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
                 { label: 'Controls', route: route('controls.main'), name: 'controls.main', icon: <ScienceIcon /> },
-                { label: 'Records', route: route('records.main'), name: 'records.main', icon: <AssessmentIcon /> },
                 { label: 'Roles', route: route('roles.main'), name: 'roles.main', icon: <AdminPanelSettingsIcon /> },
             ]
             : [

@@ -74,6 +74,7 @@ Route::middleware(['auth'])->group(function () {
         // Assets Management Routes (Admin & SuperAdmin)
         Route::prefix('assets')->as('assets.')->controller(WebController::class)->group(function () {
             Route::get('main', 'AssetsMain')->name('main');
+            Route::get('overview', 'AssetsOverview')->name('overview');
             Route::get('create', 'AssetsCreate')->name('create');
             Route::post('store', 'AssetsStore')->name('store');
             Route::get('edit/{id}', 'AssetsEdit')->name('edit');

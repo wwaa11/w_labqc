@@ -619,6 +619,55 @@ class WebController extends Controller
         return inertia('assets/main', compact('assets'));
     }
 
+    public function AssetsOverview(Request $request)
+    {
+        $query = Asset::where('is_deleted', false)->with('assetType');
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
+                    ->orWhere('model', 'like', "%{$search}%")
+                    ->orWhere('serial_number', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhere('memo', 'like', "%{$search}%")
+                    ->orWhereHas('assetType', function ($assetTypeQuery) use ($search) {
+                        $assetTypeQuery->where('asset_type_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $assets = $query->get();
+
+        // Group assets by location
+        $assetsByLocation = $assets->groupBy('location')->map(function ($locationAssets) {
+            return $locationAssets->map(function ($asset) {
+                return [
+                    'id'            => $asset->id,
+                    'name'          => $asset->name,
+                    'brand'         => $asset->brand,
+                    'model'         => $asset->model,
+                    'serial_number' => $asset->serial_number,
+                    'frequency'     => $asset->frequency,
+                    'environment'   => $asset->environment,
+                    'memo'          => $asset->memo,
+                    'asset_type'    => $asset->assetType ? $asset->assetType->asset_type_name : null,
+                    'created_at'    => $asset->created_at,
+                    'updated_at'    => $asset->updated_at,
+                ];
+            });
+        });
+
+        return inertia('assets/overview', [
+            'assetsByLocation' => $assetsByLocation,
+            'search'           => $request->search ?? '',
+            'totalAssets'      => $assets->count(),
+            'totalLocations'   => $assetsByLocation->count(),
+        ]);
+    }
+
     public function AssetsCreate()
     {
         $assetTypes = AssetType::notDeleted()->get(['id', 'asset_type_name']);
