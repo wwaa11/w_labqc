@@ -84,15 +84,35 @@ export default function AssetsOverview({ assetsByLocation, search, totalAssets, 
         <DashboardLayout>
             <Head title="Assets Overview" />
 
-            <Box>
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
                 {/* Header */}
-                <Box mb={4}>
-                    <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-                        Assets Overview
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                        View all assets grouped by location with search functionality
-                    </Typography>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    mb: { xs: 2, sm: 3 },
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2
+                }}>
+                    <Box>
+                        <Typography
+                            variant="h3"
+                            sx={{
+                                fontWeight: 700,
+                                mb: 1,
+                                fontSize: { xs: '1.75rem', sm: '2.125rem', md: '3rem' }
+                            }}
+                        >
+                            Assets Overview
+                        </Typography>
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                        >
+                            View all assets grouped by location with search functionality
+                        </Typography>
+                    </Box>
                 </Box>
 
                 {/* Search and Stats */}
@@ -100,122 +120,53 @@ export default function AssetsOverview({ assetsByLocation, search, totalAssets, 
                     <Grid container spacing={3}>
                         {/* Search Section */}
                         <Grid item xs={12} md={8}>
-                            <Card sx={{ p: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                                <Box display="flex" alignItems="center" gap={2} mb={2}>
-                                    <SearchIcon sx={{ color: 'white', fontSize: 28 }} />
-                                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-                                        Search Assets
-                                    </Typography>
-                                </Box>
-                                <form onSubmit={handleSearch}>
-                                    <TextField
-                                        fullWidth
-                                        placeholder="Search by name, brand, model, serial number, location, or asset type..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                                borderRadius: 2,
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255, 255, 255, 1)',
-                                                },
-                                                '&.Mui-focused': {
-                                                    backgroundColor: 'white',
-                                                },
-                                            },
-                                        }}
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <SearchIcon sx={{ color: 'text.secondary' }} />
-                                                </InputAdornment>
-                                            ),
-                                            endAdornment: searchTerm && (
-                                                <InputAdornment position="end">
-                                                    <IconButton
-                                                        onClick={handleClearSearch}
-                                                        size="small"
-                                                        sx={{
-                                                            color: 'text.secondary',
-                                                            '&:hover': { color: 'error.main' }
-                                                        }}
-                                                    >
-                                                        <ClearIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                </form>
+                            <Card>
+                                <CardContent sx={{ p: 3 }}>
+                                    <Box display="flex" alignItems="center" gap={2} mb={2}>
+                                        <SearchIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+                                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                            Search Assets
+                                        </Typography>
+                                    </Box>
+                                    <form onSubmit={handleSearch}>
+                                        <TextField
+                                            fullWidth
+                                            placeholder="Search by name, brand, model, serial number, location, or asset type..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </form>
+                                </CardContent>
                             </Card>
                         </Grid>
 
                         {/* Total Assets Stats Card */}
                         <Grid item xs={6} md={2}>
-                            <Card sx={{
-                                p: 3,
-                                textAlign: 'center',
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                color: 'white',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                height: '100%',
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    transform: 'skewY(-2deg)',
-                                    transformOrigin: 'top left',
-                                }
-                            }}>
-                                <Box position="relative" zIndex={1}>
-                                    <Inventory2Icon sx={{ fontSize: 28, mb: 1, opacity: 0.9 }} />
+                            <Card sx={{ height: '100%' }}>
+                                <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                                    <Inventory2Icon sx={{ fontSize: 28, mb: 1, color: 'primary.main' }} />
                                     <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
                                         {totalAssets}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                                         Total Assets
                                     </Typography>
-                                </Box>
+                                </CardContent>
                             </Card>
                         </Grid>
 
                         {/* Locations Stats Card */}
                         <Grid item xs={6} md={2}>
-                            <Card sx={{
-                                p: 3,
-                                textAlign: 'center',
-                                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                                color: 'white',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                height: '100%',
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    transform: 'skewY(-2deg)',
-                                    transformOrigin: 'top left',
-                                }
-                            }}>
-                                <Box position="relative" zIndex={1}>
-                                    <LocationOnIcon sx={{ fontSize: 28, mb: 1, opacity: 0.9 }} />
+                            <Card sx={{ height: '100%' }}>
+                                <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                                    <LocationOnIcon sx={{ fontSize: 28, mb: 1, color: 'primary.main' }} />
                                     <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
                                         {totalLocations}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500 }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                                         Locations
                                     </Typography>
-                                </Box>
+                                </CardContent>
                             </Card>
                         </Grid>
                     </Grid>

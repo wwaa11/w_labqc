@@ -1,6 +1,6 @@
 import { Head, router, Link, useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/layouts/dashboard';
-import { Box, Typography, Paper, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Card, CardContent, FormControl, Select, MenuItem, Divider, Stack, Grid, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { Box, Typography, Paper, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Card, CardContent, FormControl, Select, MenuItem, Divider, Stack, Grid, Accordion, AccordionSummary, AccordionDetails, useTheme } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -89,6 +89,7 @@ interface RecordsByAssetProps {
 
 export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom, dateTo: initialDateTo }: RecordsByAssetProps) {
     const { flash } = usePage().props as any;
+    const theme = useTheme();
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [actionType, setActionType] = useState<'approve' | 'delete' | null>(null);
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -834,14 +835,17 @@ export default function RecordsByAsset({ datas, asset, dateFrom: initialDateFrom
                                                         content={({ active, payload, label }: any) => {
                                                             if (active && payload && payload.length) {
                                                                 const data = payload[0].payload;
+                                                                const isDark = theme.palette.mode === 'dark';
+
                                                                 return (
                                                                     <div style={{
-                                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                                        border: '1px solid #ccc',
+                                                                        backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                                                                        color: isDark ? '#f1f5f9' : '#0f172a',
+                                                                        border: `1px solid ${isDark ? '#475569' : '#ccc'}`,
                                                                         borderRadius: '4px',
                                                                         padding: '8px',
                                                                         fontSize: '12px',
-                                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                                                        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.15)'
                                                                     }}>
                                                                         <div><strong>Date:</strong> {data.date}</div>
                                                                         <div><strong>Time:</strong> {new Date(data.createdAt).toLocaleTimeString()}</div>
